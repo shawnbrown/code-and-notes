@@ -83,8 +83,29 @@ def get_columns(cursor, table):
     return columns
 
 
-def insert_many(cursor, table, dict_reader):
-    pass
+def insert_many(cursor, table, columns, reader):
+    parameters = iter(reader)
+    if not columns:
+        columns = next(parameters, [])
+    columns = normalize_column_names(columns)
+
+    sql = 'INSERT INTO {0} ({1}) VALUES ({2})'.format(
+        table,
+        ', '.join(columns),
+        ', '.join(['?'] * len(columns)),
+    )
+    try:
+        cursor.executemany(sql, parameters)
+    except sqlite3.ProgrammingError as error:
+        if 'incorrect number of bindings' in str(error).lower():
+            msg = (
+                '{0}\n\nThe reader {1!r} contains some rows with too '
+                'few or too many values. Before loading, this data '
+                'must be normalized so that each row contains a number '
+                'of values equal to the number of columns being loaded.'
+            ).format(error, reader)
+            error = ValueError(msg)
+        raise error
 
 
 def add_column(cursor, table, column):

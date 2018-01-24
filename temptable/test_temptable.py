@@ -8,6 +8,7 @@ from temptable import new_table_name
 from temptable import normalize_column_names
 from temptable import create_table
 from temptable import get_columns
+from temptable import insert_many
 
 
 class TestTableExists(unittest.TestCase):
@@ -146,7 +147,67 @@ class TestGetColumns(unittest.TestCase):
 
 
 class TestInsertMany(unittest.TestCase):
-    pass
+    def setUp(self):
+        connection = sqlite3.connect(':memory:')
+        self.cursor = connection.cursor()
+
+    def test_basic_insert(self):
+        cursor = self.cursor
+
+        cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        data = [
+            ('x', 1),
+            ('y', 2),
+        ]
+        insert_many(cursor, 'test_table', ['A', 'B'], data)
+
+        cursor.execute('SELECT * FROM test_table')
+        results = cursor.fetchall()
+
+        self.assertEqual(results, data)
+
+    def test_reordered_columns(self):
+        cursor = self.cursor
+
+        cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        data = [
+            (1, 'x'),
+            (2, 'y'),
+        ]
+        columns = ['B', 'A']  # <- Column order doesn't match how table was created.
+        insert_many(cursor, 'test_table', columns, data)
+
+        cursor.execute('SELECT * FROM test_table')
+        results = cursor.fetchall()
+
+        expected = [
+            ('x', 1),
+            ('y', 2),
+        ]
+        self.assertEqual(results, expected)
+
+    def test_wrong_number_of_records(self):
+        self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+
+        too_few = [('x',), ('y',)]
+        with self.assertRaises(ValueError):
+            insert_many(self.cursor, 'test_table', ['A', 'B'], too_few)
+
+        too_many = [('x', 1, 'foo'), ('y', 2, 'bar')]
+        with self.assertRaises(ValueError):
+            insert_many(self.cursor, 'test_table', ['A', 'B'], too_many)
+
+    def test_no_data(self):
+        cursor = self.cursor
+
+        cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        data = iter([])  # <- Empty, no data.
+        insert_many(cursor, 'test_table', ['A', 'B'], data)
+
+        cursor.execute('SELECT * FROM test_table')
+        results = cursor.fetchall()
+
+        self.assertEqual(results, [])
 
 
 if __name__ == '__main__':
