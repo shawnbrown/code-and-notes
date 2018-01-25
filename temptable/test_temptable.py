@@ -10,7 +10,7 @@ from temptable import create_table
 from temptable import get_columns
 from temptable import insert_many
 from temptable import add_columns
-
+from temptable import drop_table
 
 
 class TestTableExists(unittest.TestCase):
@@ -241,7 +241,7 @@ class TestInsertMany(unittest.TestCase):
             insert_many(self.cursor, 'test_table', ['X', 'B'], data)
 
 
-class TestAddColuns(unittest.TestCase):
+class TestAddColumns(unittest.TestCase):
     def setUp(self):
         connection = sqlite3.connect(':memory:')
         self.cursor = connection.cursor()
@@ -269,6 +269,18 @@ class TestAddColuns(unittest.TestCase):
         # which they are encountered.
         columns = get_columns(self.cursor, 'test_table')
         self.assertEqual(columns, ['A', 'B', 'C', 'D'])
+
+
+class TestDropTable(unittest.TestCase):
+    def test_drop_table(self):
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        self.assertTrue(table_exists(cursor, 'test_table'))
+
+        drop_table(cursor, 'test_table')  # <- Drop table!
+        self.assertFalse(table_exists(cursor, 'test_table'))
 
 
 if __name__ == '__main__':
