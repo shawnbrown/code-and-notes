@@ -37,10 +37,11 @@ _table_names = ('tbl{0}'.format(x) for x in count())
 def new_table_name(cursor):
     global _table_names
 
-    while True:
+    new_name = next(_table_names)
+    while table_exists(cursor, new_name):
         new_name = next(_table_names)
-        if not table_exists(cursor, new_name):
-            return new_name  # <- Breaks out of the loop.
+
+    return new_name
 
 
 def normalize_names(names):
