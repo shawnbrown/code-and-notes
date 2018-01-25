@@ -1,8 +1,13 @@
 
-import collections
 import itertools
 import sqlite3
+from collections import Iterable
 
+
+try:
+    string_types = basestring
+except NameError:
+    string_types = str
 
 # When not specified, a shared temporary database is used as the default
 # connection. For faster insertions and commits, the synchronous flag is
@@ -40,34 +45,32 @@ def new_table_name(cursor):
             return new_name  # <- Breaks out of the loop.
 
 
-def normalize_column_names(names):
-    def normalize(position, name):
-        name = str(name)
-        name = name.strip()
-        if name == '':
-            msg = 'the value in position {0} is empty'.format(position)
-            raise ValueError(msg)
-        name = name.replace('"', '""')  # Escape quotes.
-        return '"{0}"'.format(name)
+def normalize_names(names):
+    def normalize(name):
+        name = str(name).strip()  # Strip whitespace.
+        return '"{0}"'.format(name.replace('"', '""'))  # Escape quotes.
 
-    return [normalize(pos, nam) for pos, nam in enumerate(names, start=1)]
+    if isinstance(names, string_types) or not isinstance(names, Iterable):
+        return normalize(names)
+    return [normalize(name) for name in names]
 
 
-def create_table(cursor, table, columns):
+def create_table(cursor, table, columns, default="''"):
     """Creates a temporary table using *table* and *columns* names."""
-    if table_exists(cursor, table):
-        raise ValueError('table named "{0}" already exists'.format(table))
+    columns = normalize_names(columns)
+    if columns.count('""') > 1:
+        custom_message = ('duplicate column name: contains multiple '
+                          'columns where names are empty strings or '
+                          'whitespace')
+        raise sqlite3.OperationalError(custom_message)
+        # Above: The default language for this corner case is very
+        # confusing. Catching this condition and raising the error
+        # before execution is simpler than parsing the inevitable
+        # OperationalError and re-raising it with a modified message.
 
-    columns = normalize_column_names(columns)
-
-    # Check for duplicate column names.
-    counter = collections.Counter(columns)
-    duplicates = [name for name, count in counter.items() if count > 1]
-    if duplicates:
-        msg = 'expected unique field names, got duplicates: {0}'
-        raise ValueError(msg.format(', '.join(duplicates)))
-
-    column_defs = ["{0} DEFAULT ''".format(col) for col in columns]
+    if not default:
+        default = 'NULL'
+    column_defs = ['{0} DEFAULT {1}'.format(x, default) for x in columns]
     column_defs = ', '.join(column_defs)
 
     statement = 'CREATE TEMPORARY TABLE {0} ({1})'.format(table, column_defs)
@@ -79,15 +82,13 @@ def get_columns(cursor, table):
     cursor.execute('PRAGMA table_info({0})'.format(table))
     columns = [x[1] for x in cursor]
     if not columns:
-        raise ValueError('table {0!r} does not exist'.format(table))
+        raise sqlite3.ProgrammingError('no such table: {0}'.format(table))
     return columns
 
 
-def insert_many(cursor, table, columns, reader):
-    parameters = iter(reader)
-    if not columns:
-        columns = next(parameters, [])
-    columns = normalize_column_names(columns)
+def insert_many(cursor, table, columns, parameters):
+    table = normalize_names(table)
+    columns = normalize_names(columns)
 
     sql = 'INSERT INTO {0} ({1}) VALUES ({2})'.format(
         table,
@@ -99,18 +100,30 @@ def insert_many(cursor, table, columns, reader):
     except sqlite3.ProgrammingError as error:
         if 'incorrect number of bindings' in str(error).lower():
             msg = (
-                '{0}\n\nThe reader {1!r} contains some rows with too '
-                'few or too many values. Before loading, this data '
-                'must be normalized so that each row contains a number '
+                '{0}\n\nThe parameters {1!r} contains some rows with '
+                'too few or too many values. Before loading this data, '
+                'it must be normalized so each row contains a number '
                 'of values equal to the number of columns being loaded.'
-            ).format(error, reader)
-            error = ValueError(msg)
+            ).format(error, parameters)
+            error = sqlite3.ProgrammingError(msg)
+            error.__cause__ = None
         raise error
 
 
-def add_column(cursor, table, column):
-    pass
+def add_columns(cursor, table, columns, default="''"):
+    existing_columns = set(normalize_names(get_columns(cursor, table)))
+    for column in normalize_names(columns):
+        if column in existing_columns:
+            continue
+
+        if not default:
+            default = 'NULL'
+        sql = 'ALTER TABLE {0} ADD COLUMN {1} DEFAULT {2}'
+        sql = sql.format(table, column, default)
+
+        cursor.execute(sql)
+        existing_columns.add(column)
 
 
-def drop_table(cursor, tablename):
-    cursor.execute('DROP TABLE IF EXISTS {0}'.format(tablename))
+def drop_table(cursor, table):
+    cursor.execute('DROP TABLE IF EXISTS {0}'.format(table))

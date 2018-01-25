@@ -5,10 +5,12 @@ import unittest
 import temptable
 from temptable import table_exists
 from temptable import new_table_name
-from temptable import normalize_column_names
+from temptable import normalize_names
 from temptable import create_table
 from temptable import get_columns
 from temptable import insert_many
+from temptable import add_columns
+
 
 
 class TestTableExists(unittest.TestCase):
@@ -50,33 +52,30 @@ class TestNewTableName(unittest.TestCase):
         self.assertEqual(table_name, 'tbl2')
 
 
-class TestNormalizeColumnNames(unittest.TestCase):
-    def test_simple_case(self):
-        normalized = normalize_column_names(['A', 'B'])
+class TestNormalizeNames(unittest.TestCase):
+    def test_single_value(self):
+        normalized = normalize_names('A')
+        self.assertEqual(normalized, '"A"')
+
+    def test_list_of_values(self):
+        normalized = normalize_names(['A', 'B'])
         expected = ['"A"', '"B"']
         self.assertEqual(normalized, expected)
 
     def test_non_strings(self):
-        normalized = normalize_column_names([1, 2.5])
-        expected = ['"1"', '"2.5"']
-        self.assertEqual(normalized, expected)
+        normalized = normalize_names(2.5)
+        self.assertEqual(normalized, '"2.5"')
 
     def test_whitespace(self):
-        normalized = normalize_column_names(['  A  ', '  B  '])
-        expected = ['"A"', '"B"']
-        self.assertEqual(normalized, expected)
+        normalized = normalize_names('  A  ')
+        self.assertEqual(normalized, '"A"')
 
-    def test_empty_values(self):
-        with self.assertRaises(ValueError):
-            normalize_column_names([''])  # <- Empty string.
+        normalized = normalize_names('    ')
+        self.assertEqual(normalized, '""')
 
-        with self.assertRaises(ValueError):
-            normalize_column_names(['     '])  # <- All whitespace.
-
-    def test_quotes(self):
-        normalized = normalize_column_names(['x "y"'])
-        expected = ['"x ""y"""']  # Escaped by doubling '"' -> '""'
-        self.assertEqual(normalized, expected)
+    def test_quote_escaping(self):
+        normalized = normalize_names('Steve "The Woz" Wozniak')
+        self.assertEqual(normalized, '"Steve ""The Woz"" Wozniak"')
 
 
 class TestCreateTable(unittest.TestCase):
@@ -102,29 +101,48 @@ class TestCreateTable(unittest.TestCase):
         self.assertEqual(self.count_tables(), 2, msg='two tables')
 
     def test_default_value(self):
-        create_table(self.cursor, 'test_table', ['A', 'B'])
-        self.cursor.execute("INSERT INTO test_table (A) VALUES ('foo')")
-        self.cursor.execute("INSERT INTO test_table (B) VALUES ('bar')")
+        # When unspecified, default is empty string.
+        create_table(self.cursor, 'test_table1', ['A', 'B'])
+        self.cursor.execute("INSERT INTO test_table1 (A) VALUES ('foo')")
+        self.cursor.execute("INSERT INTO test_table1 (B) VALUES ('bar')")
 
-        self.cursor.execute('SELECT * FROM test_table')
+        self.cursor.execute('SELECT * FROM test_table1')
         expected = [
             ('foo', ''),  # <- Default in column B
             ('', 'bar'),  # <- Default in column A
         ]
         self.assertEqual(self.cursor.fetchall(), expected)
 
-    def test_table_already_exists(self):
-        create_table(self.cursor, 'test_table', ['A', 'B'])
+        # Setting default to None.
+        create_table(self.cursor, 'test_table2', ['A', 'B'], default=None)
+        self.cursor.execute("INSERT INTO test_table2 (A) VALUES ('foo')")
+        self.cursor.execute("INSERT INTO test_table2 (B) VALUES ('bar')")
 
-        with self.assertRaises(ValueError):
-            create_table(self.cursor, 'test_table', ['A', 'B'])
+        self.cursor.execute('SELECT * FROM test_table2')
+        expected = [
+            ('foo', None),  # <- Default in column B
+            (None, 'bar'),  # <- Default in column A
+        ]
+        self.assertEqual(self.cursor.fetchall(), expected)
 
-    def test_duplicate_columns(self):
-        with self.assertRaises(ValueError):
-            create_table(self.cursor, 'test_table1', ['A', 'B', 'A'])
+    def test_sqlite3_errors(self):
+        """Sqlite errors should not be caught."""
+        # Table already exists.
+        create_table(self.cursor, 'test_table1', ['A', 'B'])
+        with self.assertRaises(sqlite3.OperationalError):
+            create_table(self.cursor, 'test_table1', ['A', 'B'])
 
-        with self.assertRaises(ValueError):
-            create_table(self.cursor, 'test_table2', ['A', 'B', '  A  '])
+        # Duplicate column name.
+        with self.assertRaises(sqlite3.OperationalError):
+            create_table(self.cursor, 'test_table2', ['A', 'B', 'A'])
+
+        # Duplicate column name (after normalization).
+        with self.assertRaises(sqlite3.OperationalError):
+            create_table(self.cursor, 'test_table3', ['A', 'B', '  A  '])
+
+        # Duplicate empty/all-whitespace string columns (uses modified message).
+        with self.assertRaises(sqlite3.OperationalError) as cm:
+            create_table(self.cursor, 'test_table4', ['', 'B', '    '])
 
 
 class TestGetColumns(unittest.TestCase):
@@ -142,7 +160,7 @@ class TestGetColumns(unittest.TestCase):
         self.assertEqual(columns, ['C', 'D'])
 
     def test_missing_table(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(sqlite3.ProgrammingError):
             columns = get_columns(self.cursor, 'missing_table')
 
 
@@ -190,11 +208,11 @@ class TestInsertMany(unittest.TestCase):
         self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
 
         too_few = [('x',), ('y',)]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(sqlite3.ProgrammingError):
             insert_many(self.cursor, 'test_table', ['A', 'B'], too_few)
 
         too_many = [('x', 1, 'foo'), ('y', 2, 'bar')]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(sqlite3.ProgrammingError):
             insert_many(self.cursor, 'test_table', ['A', 'B'], too_many)
 
     def test_no_data(self):
@@ -208,6 +226,49 @@ class TestInsertMany(unittest.TestCase):
         results = cursor.fetchall()
 
         self.assertEqual(results, [])
+
+    def test_sqlite3_errors(self):
+        """Sqlite errors should not be caught."""
+        # No such table.
+        with self.assertRaises(sqlite3.OperationalError):
+            data = [('x', 1), ('y', 2)]
+            insert_many(self.cursor, 'missing_table', ['A', 'B'], data)
+
+        # No column named X.
+        with self.assertRaises(sqlite3.OperationalError):
+            self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+            data = [('a', 1), ('b', 2)]
+            insert_many(self.cursor, 'test_table', ['X', 'B'], data)
+
+
+class TestAddColuns(unittest.TestCase):
+    def setUp(self):
+        connection = sqlite3.connect(':memory:')
+        self.cursor = connection.cursor()
+
+    def test_new_columns(self):
+        self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        add_columns(self.cursor, 'test_table', ['C', 'D'])
+
+        columns = get_columns(self.cursor, 'test_table')
+        self.assertEqual(columns, ['A', 'B', 'C', 'D'])
+
+    def test_existing_columns(self):
+        self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        add_columns(self.cursor, 'test_table', ['A', 'B', 'C', 'D'])
+
+        columns = get_columns(self.cursor, 'test_table')
+        self.assertEqual(columns, ['A', 'B', 'C', 'D'])
+
+    def test_ordering_behavior(self):
+        self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
+        add_columns(self.cursor, 'test_table', ['B', 'C', 'A', 'D'])
+
+        # Columns A and B already exist in a specified order and
+        # the new columns ('C' and 'D') are added in the order in
+        # which they are encountered.
+        columns = get_columns(self.cursor, 'test_table')
+        self.assertEqual(columns, ['A', 'B', 'C', 'D'])
 
 
 if __name__ == '__main__':
