@@ -1,4 +1,5 @@
 
+import itertools
 import sqlite3
 import unittest
 
@@ -11,6 +12,7 @@ from temptable import get_columns
 from temptable import insert_many
 from temptable import add_columns
 from temptable import drop_table
+from temptable import savepoint
 
 
 class TestTableExists(unittest.TestCase):
@@ -32,7 +34,9 @@ class TestTableExists(unittest.TestCase):
 
 class TestNewTableName(unittest.TestCase):
     def setUp(self):
-        temptable._table_counter = 0  # Reset internal counter.
+        # Rebuild internal generator.
+        temptable._table_names = ('tbl{0}'.format(x) for x in itertools.count())
+
         connection = sqlite3.connect(':memory:')
         self.cursor = connection.cursor()
 
@@ -281,6 +285,91 @@ class TestDropTable(unittest.TestCase):
 
         drop_table(cursor, 'test_table')  # <- Drop table!
         self.assertFalse(table_exists(cursor, 'test_table'))
+
+
+class TestSavepoint(unittest.TestCase):
+    def setUp(self):
+        connection = sqlite3.connect(':memory:')
+        connection.isolation_level = None
+        self.cursor = connection.cursor()
+
+    def test_transaction_status(self):
+        connection = self.cursor.connection
+        if not hasattr(connection, 'in_transaction'):  # New in 3.2.
+            return
+
+        self.assertFalse(connection.in_transaction)
+        with savepoint(self.cursor):
+            self.assertTrue(connection.in_transaction)
+        self.assertFalse(connection.in_transaction)
+
+    def test_release(self):
+        cursor = self.cursor
+
+        with savepoint(cursor):
+            cursor.execute('CREATE TEMPORARY TABLE test_table ("A")')
+            cursor.execute("INSERT INTO test_table VALUES ('one')")
+            cursor.execute("INSERT INTO test_table VALUES ('two')")
+            cursor.execute("INSERT INTO test_table VALUES ('three')")
+
+        cursor.execute('SELECT * FROM test_table')
+        self.assertEqual(cursor.fetchall(), [('one',), ('two',), ('three',)])
+
+    def test_nested_releases(self):
+        cursor = self.cursor
+
+        with savepoint(cursor):
+            cursor.execute('CREATE TEMPORARY TABLE test_table ("A")')
+            cursor.execute("INSERT INTO test_table VALUES ('one')")
+            with savepoint(cursor):  # <- Nested!
+                cursor.execute("INSERT INTO test_table VALUES ('two')")
+            cursor.execute("INSERT INTO test_table VALUES ('three')")
+
+        cursor.execute('SELECT * FROM test_table')
+        self.assertEqual(cursor.fetchall(), [('one',), ('two',), ('three',)])
+
+    def test_rollback(self):
+        cursor = self.cursor
+
+        with savepoint(cursor):  # <- Released.
+            cursor.execute('CREATE TEMPORARY TABLE test_table ("A")')
+
+        try:
+            with savepoint(cursor):  # <- Rolled back!
+                cursor.execute("INSERT INTO test_table VALUES ('one')")
+                cursor.execute("INSERT INTO test_table VALUES ('two')")
+                cursor.execute("INSERT INTO missing_table VALUES ('three')")  # <- Bad table.
+        except sqlite3.OperationalError:
+            pass
+
+        cursor.execute('SELECT * FROM test_table')
+        self.assertEqual(cursor.fetchall(), [], 'Table should exist but contain no records.')
+
+    def test_nested_rollback(self):
+        cursor = self.cursor
+
+        with savepoint(cursor):  # <- Released.
+            cursor.execute('CREATE TEMPORARY TABLE test_table ("A")')
+            cursor.execute("INSERT INTO test_table VALUES ('one')")
+            try:
+                with savepoint(cursor):  # <- Nested rollback!
+                    cursor.execute("INSERT INTO test_table VALUES ('two')")
+                    raise Exception()
+            except Exception:
+                pass
+            cursor.execute("INSERT INTO test_table VALUES ('three')")
+
+        cursor.execute('SELECT * FROM test_table')
+        self.assertEqual(cursor.fetchall(), [('one',), ('three',)])
+
+    def test_bad_isolation_level(self):
+        connection = sqlite3.connect(':memory:')
+        connection.isolation_level = 'DEFERRED'  # <- Expects None/autocommit!
+        cursor = connection.cursor()
+
+        with self.assertRaises(ValueError):
+            with savepoint(cursor):
+                pass
 
 
 if __name__ == '__main__':

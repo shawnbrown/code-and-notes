@@ -1,7 +1,7 @@
 
-import itertools
 import sqlite3
 from collections import Iterable
+from itertools import count
 
 
 try:
@@ -33,14 +33,12 @@ def table_exists(cursor, table):
     return bool(cursor.fetchall())
 
 
-_table_counter = 0
+_table_names = ('tbl{0}'.format(x) for x in count())
 def new_table_name(cursor):
-    global _table_counter
+    global _table_names
 
     while True:
-        new_name = 'tbl{0}'.format(_table_counter)  # Make new name and
-        _table_counter += 1                         # iterate counter.
-
+        new_name = next(_table_names)
         if not table_exists(cursor, new_name):
             return new_name  # <- Breaks out of the loop.
 
@@ -127,3 +125,29 @@ def add_columns(cursor, table, columns, default="''"):
 
 def drop_table(cursor, table):
     cursor.execute('DROP TABLE IF EXISTS {0}'.format(table))
+
+
+_savepoint_names = ('svpnt{0}'.format(x) for x in count())
+class savepoint(object):
+    """Sqlite SAVEPOINT context manager."""
+    def __init__(self, cursor):
+        global _savepoint_names
+
+        if cursor.connection.isolation_level is not None:
+            raise ValueError(
+                'To allow for precise control of transaction and '
+                'savepoint handling, the cursor\'s connection must '
+                'be run in "autocommit" mode (set isolation_level=None).'
+            )
+
+        self.name = next(_savepoint_names)
+        self.cursor = cursor
+
+    def __enter__(self):
+        self.cursor.execute('SAVEPOINT {0}'.format(self.name))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.cursor.execute('RELEASE {0}'.format(self.name))
+        else:
+            self.cursor.execute('ROLLBACK TO {0}'.format(self.name))
