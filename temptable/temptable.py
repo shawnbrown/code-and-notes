@@ -85,31 +85,30 @@ def get_columns(cursor, table):
     return columns
 
 
-def insert_many(cursor, table, columns, parameters):
+def insert_records(cursor, table, columns, records):
     table = normalize_names(table)
     columns = normalize_names(columns)
-
     sql = 'INSERT INTO {0} ({1}) VALUES ({2})'.format(
         table,
         ', '.join(columns),
         ', '.join(['?'] * len(columns)),
     )
     try:
-        cursor.executemany(sql, parameters)
+        cursor.executemany(sql, records)
     except sqlite3.ProgrammingError as error:
         if 'incorrect number of bindings' in str(error).lower():
             msg = (
-                '{0}\n\nThe parameters {1!r} contains some rows with '
-                'too few or too many values. Before loading this data, '
-                'it must be normalized so each row contains a number '
-                'of values equal to the number of columns being loaded.'
-            ).format(error, parameters)
+                '{0}\n\nThe records {1!r} contains some rows with too '
+                'few or too many values. Before loading this data, it '
+                'must be normalized so each row contains a number of '
+                'values equal to the number of columns being loaded.'
+            ).format(error, records)
             error = sqlite3.ProgrammingError(msg)
             error.__cause__ = None
         raise error
 
 
-def add_columns(cursor, table, columns, default="''"):
+def alter_table(cursor, table, columns, default="''"):
     existing_columns = set(normalize_names(get_columns(cursor, table)))
     for column in normalize_names(columns):
         if column in existing_columns:
@@ -135,11 +134,11 @@ class savepoint(object):
         global _savepoint_names
 
         if cursor.connection.isolation_level is not None:
-            raise ValueError(
-                'To allow for precise control of transaction and '
-                'savepoint handling, the cursor\'s connection must '
-                'be run in "autocommit" mode (set isolation_level=None).'
-            )
+            msg = ('The cursor\'s connection must be running in '
+                   '"autocommit" mode for precise transaction and '
+                   'savepoint handling. Turn on autocommit by '
+                   'assigning "isolation_level=None".')
+            raise ValueError(msg)
 
         self.name = next(_savepoint_names)
         self.cursor = cursor

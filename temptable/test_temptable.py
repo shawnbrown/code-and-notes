@@ -9,8 +9,8 @@ from temptable import new_table_name
 from temptable import normalize_names
 from temptable import create_table
 from temptable import get_columns
-from temptable import insert_many
-from temptable import add_columns
+from temptable import insert_records
+from temptable import alter_table
 from temptable import drop_table
 from temptable import savepoint
 
@@ -168,7 +168,7 @@ class TestGetColumns(unittest.TestCase):
             columns = get_columns(self.cursor, 'missing_table')
 
 
-class TestInsertMany(unittest.TestCase):
+class TestInsertRecords(unittest.TestCase):
     def setUp(self):
         connection = sqlite3.connect(':memory:')
         self.cursor = connection.cursor()
@@ -177,27 +177,27 @@ class TestInsertMany(unittest.TestCase):
         cursor = self.cursor
 
         cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        data = [
+        records = [
             ('x', 1),
             ('y', 2),
         ]
-        insert_many(cursor, 'test_table', ['A', 'B'], data)
+        insert_records(cursor, 'test_table', ['A', 'B'], records)
 
         cursor.execute('SELECT * FROM test_table')
         results = cursor.fetchall()
 
-        self.assertEqual(results, data)
+        self.assertEqual(results, records)
 
     def test_reordered_columns(self):
         cursor = self.cursor
 
         cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        data = [
+        records = [
             (1, 'x'),
             (2, 'y'),
         ]
         columns = ['B', 'A']  # <- Column order doesn't match how table was created.
-        insert_many(cursor, 'test_table', columns, data)
+        insert_records(cursor, 'test_table', columns, records)
 
         cursor.execute('SELECT * FROM test_table')
         results = cursor.fetchall()
@@ -208,23 +208,23 @@ class TestInsertMany(unittest.TestCase):
         ]
         self.assertEqual(results, expected)
 
-    def test_wrong_number_of_records(self):
+    def test_wrong_number_of_values(self):
         self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
 
         too_few = [('x',), ('y',)]
         with self.assertRaises(sqlite3.ProgrammingError):
-            insert_many(self.cursor, 'test_table', ['A', 'B'], too_few)
+            insert_records(self.cursor, 'test_table', ['A', 'B'], too_few)
 
         too_many = [('x', 1, 'foo'), ('y', 2, 'bar')]
         with self.assertRaises(sqlite3.ProgrammingError):
-            insert_many(self.cursor, 'test_table', ['A', 'B'], too_many)
+            insert_records(self.cursor, 'test_table', ['A', 'B'], too_many)
 
-    def test_no_data(self):
+    def test_no_records(self):
         cursor = self.cursor
 
         cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        data = iter([])  # <- Empty, no data.
-        insert_many(cursor, 'test_table', ['A', 'B'], data)
+        records = iter([])  # <- Empty, no data.
+        insert_records(cursor, 'test_table', ['A', 'B'], records)
 
         cursor.execute('SELECT * FROM test_table')
         results = cursor.fetchall()
@@ -235,38 +235,38 @@ class TestInsertMany(unittest.TestCase):
         """Sqlite errors should not be caught."""
         # No such table.
         with self.assertRaises(sqlite3.OperationalError):
-            data = [('x', 1), ('y', 2)]
-            insert_many(self.cursor, 'missing_table', ['A', 'B'], data)
+            records = [('x', 1), ('y', 2)]
+            insert_records(self.cursor, 'missing_table', ['A', 'B'], records)
 
         # No column named X.
         with self.assertRaises(sqlite3.OperationalError):
             self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-            data = [('a', 1), ('b', 2)]
-            insert_many(self.cursor, 'test_table', ['X', 'B'], data)
+            records = [('a', 1), ('b', 2)]
+            insert_records(self.cursor, 'test_table', ['X', 'B'], records)
 
 
-class TestAddColumns(unittest.TestCase):
+class TestAlterTable(unittest.TestCase):
     def setUp(self):
         connection = sqlite3.connect(':memory:')
         self.cursor = connection.cursor()
 
     def test_new_columns(self):
         self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        add_columns(self.cursor, 'test_table', ['C', 'D'])
+        alter_table(self.cursor, 'test_table', ['C', 'D'])
 
         columns = get_columns(self.cursor, 'test_table')
         self.assertEqual(columns, ['A', 'B', 'C', 'D'])
 
     def test_existing_columns(self):
         self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        add_columns(self.cursor, 'test_table', ['A', 'B', 'C', 'D'])
+        alter_table(self.cursor, 'test_table', ['A', 'B', 'C', 'D'])
 
         columns = get_columns(self.cursor, 'test_table')
         self.assertEqual(columns, ['A', 'B', 'C', 'D'])
 
     def test_ordering_behavior(self):
         self.cursor.execute('CREATE TEMPORARY TABLE test_table ("A", "B")')
-        add_columns(self.cursor, 'test_table', ['B', 'C', 'A', 'D'])
+        alter_table(self.cursor, 'test_table', ['B', 'C', 'A', 'D'])
 
         # Columns A and B already exist in a specified order and
         # the new columns ('C' and 'D') are added in the order in
