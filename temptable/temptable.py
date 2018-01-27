@@ -1,7 +1,9 @@
 
 import sqlite3
 from collections import Iterable
+from collections import Mapping
 from itertools import count
+from itertools import chain
 
 
 try:
@@ -151,3 +153,48 @@ class savepoint(object):
             self.cursor.execute('RELEASE {0}'.format(self.name))
         else:
             self.cursor.execute('ROLLBACK TO {0}'.format(self.name))
+
+
+def load_data(cursor, table, *args):
+    """
+    load_data(cursor, table, columns, records)
+    load_data(cursor, table, records)
+    """
+    try:
+        records, = args
+        columns = None
+    except ValueError:
+        columns, records = args
+
+    records = iter(records)
+    first_record = next(records, None)
+    if columns:
+        if first_record:
+            records = chain([first_record], records)
+    else:
+        if not first_record:
+            return  # <- EXIT! (No table created.)
+        try:  # Try mapping.
+            columns = list(first_record.keys())
+            records = chain([first_record], records)
+        except AttributeError:
+            try:  # Try namedtuple.
+                columns = first_record._fields
+                records = chain([first_record], records)
+            except AttributeError:
+                columns = first_record  # Use first row as column names.
+
+    if not isinstance(columns, Iterable) or isinstance(columns, str):
+        msg = 'expected iterable of strings, got {0!r}'
+        raise TypeError(msg.format(columns))
+    columns = list(columns)  # Make sure columns is a sequence.
+
+    if isinstance(first_record, Mapping):
+        records = ([rec.get(c, '') for c in columns] for rec in records)
+
+    with savepoint(cursor):
+        if table_exists(cursor, table):
+            alter_table(cursor, table, columns, default="''")
+        else:
+            create_table(cursor, table, columns, default="''")
+        insert_records(cursor, table, columns, records)

@@ -2,6 +2,8 @@
 import itertools
 import sqlite3
 import unittest
+from collections import namedtuple
+from collections import OrderedDict
 
 import temptable
 from temptable import table_exists
@@ -13,6 +15,7 @@ from temptable import insert_records
 from temptable import alter_table
 from temptable import drop_table
 from temptable import savepoint
+from temptable import load_data
 
 
 class TestTableExists(unittest.TestCase):
@@ -370,6 +373,80 @@ class TestSavepoint(unittest.TestCase):
         with self.assertRaises(ValueError):
             with savepoint(cursor):
                 pass
+
+
+class TestLoadData(unittest.TestCase):
+    def setUp(self):
+        connection = sqlite3.connect(':memory:')
+        connection.isolation_level = None
+        self.cursor = connection.cursor()
+
+    def test_four_args(self):
+        columns = ['A', 'B']
+        records = [
+            ('x', 1),
+            ('y', 2),
+        ]
+        load_data(self.cursor, 'temptable', columns, records)  # <- Four args.
+        self.cursor.execute('SELECT A, B FROM temptable')
+        self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
+
+    def test_four_args_mappings(self):
+        columns = ['A', 'B']
+        records = [
+            OrderedDict([('A', 'x'), ('B', 1)]),
+            OrderedDict([('B', 2), ('A', 'y')]),  # <- Different key order.
+        ]
+        load_data(self.cursor, 'temptable', columns, records)  # <- Four args.
+        self.cursor.execute('SELECT A, B FROM temptable')
+        self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
+
+    def test_three_args(self):
+        records = [
+            ['A', 'B'],  # <- Used as header row.
+            ('x', 1),
+            ('y', 2),
+        ]
+        load_data(self.cursor, 'temptable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM temptable')
+        self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
+
+    def test_three_args_mappings(self):
+        records = [
+            OrderedDict([('A', 'x'), ('B', 1)]),
+            OrderedDict([('B', 2), ('A', 'y')]),  # <- Different key order.
+        ]
+        load_data(self.cursor, 'temptable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM temptable')
+        self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
+
+    def test_three_args_namedtuples(self):
+        ntup = namedtuple('ntup', ['A', 'B'])
+        records = [
+            ntup('x', 1),
+            ntup('y', 2),
+        ]
+        load_data(self.cursor, 'temptable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM temptable')
+        self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
+
+    def test_empty_records(self):
+        records = []
+
+        load_data(self.cursor, 'temptable1', ['A', 'B'], records)  # <- Using four args.
+        self.assertTrue(table_exists(self.cursor, 'temptable1'), 'should create table')
+        self.cursor.execute('SELECT A, B FROM temptable1')
+        self.assertEqual(self.cursor.fetchall(), [], 'should have zero records')
+
+        load_data(self.cursor, 'temptable2', records)  # <- Using three args.
+        self.assertFalse(table_exists(self.cursor, 'temptable2'), 'should not create table')
+
+    def test_bad_columns_object(self):
+        records = [('x', 1), ('y', 2)]
+        columns = 'bad columns object'  # <- Expects iterable of names, not this str.
+
+        with self.assertRaises(TypeError):
+            load_data(self.cursor, 'temptable', columns, records)
 
 
 if __name__ == '__main__':
