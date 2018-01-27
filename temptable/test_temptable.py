@@ -387,8 +387,8 @@ class TestLoadData(unittest.TestCase):
             ('x', 1),
             ('y', 2),
         ]
-        load_data(self.cursor, 'temptable', columns, records)  # <- Four args.
-        self.cursor.execute('SELECT A, B FROM temptable')
+        load_data(self.cursor, 'testtable', columns, records)  # <- Four args.
+        self.cursor.execute('SELECT A, B FROM testtable')
         self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
 
     def test_four_args_mappings(self):
@@ -397,8 +397,8 @@ class TestLoadData(unittest.TestCase):
             OrderedDict([('A', 'x'), ('B', 1)]),
             OrderedDict([('B', 2), ('A', 'y')]),  # <- Different key order.
         ]
-        load_data(self.cursor, 'temptable', columns, records)  # <- Four args.
-        self.cursor.execute('SELECT A, B FROM temptable')
+        load_data(self.cursor, 'testtable', columns, records)  # <- Four args.
+        self.cursor.execute('SELECT A, B FROM testtable')
         self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
 
     def test_three_args(self):
@@ -407,8 +407,8 @@ class TestLoadData(unittest.TestCase):
             ('x', 1),
             ('y', 2),
         ]
-        load_data(self.cursor, 'temptable', records)  # <- Three args.
-        self.cursor.execute('SELECT A, B FROM temptable')
+        load_data(self.cursor, 'testtable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM testtable')
         self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
 
     def test_three_args_mappings(self):
@@ -416,8 +416,8 @@ class TestLoadData(unittest.TestCase):
             OrderedDict([('A', 'x'), ('B', 1)]),
             OrderedDict([('B', 2), ('A', 'y')]),  # <- Different key order.
         ]
-        load_data(self.cursor, 'temptable', records)  # <- Three args.
-        self.cursor.execute('SELECT A, B FROM temptable')
+        load_data(self.cursor, 'testtable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM testtable')
         self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
 
     def test_three_args_namedtuples(self):
@@ -426,27 +426,27 @@ class TestLoadData(unittest.TestCase):
             ntup('x', 1),
             ntup('y', 2),
         ]
-        load_data(self.cursor, 'temptable', records)  # <- Three args.
-        self.cursor.execute('SELECT A, B FROM temptable')
+        load_data(self.cursor, 'testtable', records)  # <- Three args.
+        self.cursor.execute('SELECT A, B FROM testtable')
         self.assertEqual(self.cursor.fetchall(), [('x', 1), ('y', 2)])
 
     def test_empty_records(self):
         records = []
 
-        load_data(self.cursor, 'temptable1', ['A', 'B'], records)  # <- Using four args.
-        self.assertTrue(table_exists(self.cursor, 'temptable1'), 'should create table')
-        self.cursor.execute('SELECT A, B FROM temptable1')
+        load_data(self.cursor, 'testtable1', ['A', 'B'], records)  # <- Using four args.
+        self.assertTrue(table_exists(self.cursor, 'testtable1'), 'should create table')
+        self.cursor.execute('SELECT A, B FROM testtable1')
         self.assertEqual(self.cursor.fetchall(), [], 'should have zero records')
 
-        load_data(self.cursor, 'temptable2', records)  # <- Using three args.
-        self.assertFalse(table_exists(self.cursor, 'temptable2'), 'should not create table')
+        load_data(self.cursor, 'testtable2', records)  # <- Using three args.
+        self.assertFalse(table_exists(self.cursor, 'testtable2'), 'should not create table')
 
     def test_bad_columns_object(self):
         records = [('x', 1), ('y', 2)]
         columns = 'bad columns object'  # <- Expects iterable of names, not this str.
 
         with self.assertRaises(TypeError):
-            load_data(self.cursor, 'temptable', columns, records)
+            load_data(self.cursor, 'testtable', columns, records)
 
 
 if __name__ == '__main__':
