@@ -19,7 +19,11 @@ except NameError:
 
 
 def exhaustible(iterable):
+    """Returns True if *iterable* is an exhaustible iterator."""
     return iter(iterable) is iter(iterable)
+    # Above: This works because exhaustible iterators return themselves
+    # when passed to iter() but non-exhaustible iterables will return
+    # newly created iterators.
 
 
 preferred_encoding = 'utf-8'
