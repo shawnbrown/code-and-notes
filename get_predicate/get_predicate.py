@@ -35,7 +35,7 @@ class get_predicate(object):
             equality_object = cls._adapt(obj)
 
         def predicate(x):
-            return x == equality_object
+            return equality_object == x
         predicate.__name__ = repr(equality_object)
 
         return predicate
