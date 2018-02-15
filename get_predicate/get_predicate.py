@@ -145,7 +145,7 @@ if __name__ == '__main__':
             self.assertTrue(adapted == 'a')
             self.assertFalse(adapted == 'x')
 
-        def test_equality(self):
+        def test_whole_set_equality(self):
             adapted = get_predicate._adapt(set(['a', 'b', 'c']))
 
             self.assertTrue(adapted == set(['a', 'b', 'c']))
