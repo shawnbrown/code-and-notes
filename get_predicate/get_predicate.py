@@ -55,7 +55,7 @@ class get_predicate(object):
             func = lambda x: (x is value) or (value.search(x) is not None)
             name = 're.compile({0!r})'.format(value.pattern)
         elif isinstance(value, set):
-            func = lambda x: (x in value) or (x is value)
+            func = lambda x: (x in value) or (x == value)
             name = repr(value)
         else:
             return value  # <- EXIT!
@@ -145,11 +145,10 @@ if __name__ == '__main__':
             self.assertTrue(adapted == 'a')
             self.assertFalse(adapted == 'x')
 
-        def test_identity(self):
-            myset = set(['a', 'b', 'c'])
-            adapted = get_predicate._adapt(myset)
+        def test_equality(self):
+            adapted = get_predicate._adapt(set(['a', 'b', 'c']))
 
-            self.assertTrue(adapted == myset)
+            self.assertTrue(adapted == set(['a', 'b', 'c']))
 
         def test_repr(self):
             adapted = get_predicate._adapt(set(['a']))
