@@ -21,7 +21,7 @@ except NameError:
 
 
 class PredicateObject(abc.ABC):
-    """Wrapper to mark objects that implement rich predicate matching."""
+    """Base class for objects that implement rich predicate matching."""
     @abc.abstractmethod
     def __repr__(self):
         return super(PredicateObject, self).__repr__()
@@ -29,7 +29,7 @@ class PredicateObject(abc.ABC):
 
 class PredicateTuple(PredicateObject, tuple):
     """Wrapper to mark tuples that contain one or more PredicateMatcher
-    objects.
+    instances.
     """
     pass
 
@@ -47,45 +47,47 @@ class PredicateMatcher(PredicateObject):
         return self._name
 
 
-class get_predicate(object):
+def _get_matcher(value):
+    """Return an object suitable for comparing to other values
+    using the "==" operator.
+
+    When special comparison handling is required, returns a
+    PredicateMatcher instance. When no special comparison is
+    needed, returns the original object unchanged.
+    """
+    if callable(value):
+        func = lambda x: (x is value) or value(x)
+        name = getattr(value, '__name__', repr(value))
+    elif value is Ellipsis:
+        func = lambda x: True  # <- Wildcard (matches everything).
+        name = '...'
+    elif isinstance(value, regex_types):
+        func = lambda x: (x is value) or (value.search(x) is not None)
+        name = 're.compile({0!r})'.format(value.pattern)
+    elif isinstance(value, set):
+        func = lambda x: (x in value) or (x == value)
+        name = repr(value)
+    else:
+        return value  # <- EXIT!
+    return PredicateMatcher(func, name)
+
+
+def get_predicate(obj):
     """Return a predicate object suitable for comparing to other
-    values using the equality operator ("==").
+    objects using the "==" operator.
 
     If the original object is already suitable for this purpose,
     it will be returned unchanged. If special comparison handling
-    is implemented, a PredicateObject instance will be returned
-    instead.
+    is implemented, a PredicateObject will be returned instead.
     """
-    def __new__(cls, obj):
-        if isinstance(obj, tuple):
-            predicate = tuple(cls._adapt(x) for x in obj)
-            for x in predicate:
-                if isinstance(x, PredicateObject):
-                    return PredicateTuple(predicate)  # <- Wrapper.
-            return obj  # <- Orignal reference.
+    if isinstance(obj, tuple):
+        predicate = tuple(_get_matcher(x) for x in obj)
+        for x in predicate:
+            if isinstance(x, PredicateObject):
+                return PredicateTuple(predicate)  # <- Wrapper.
+        return obj  # <- Orignal reference.
 
-        return cls._adapt(obj)
-
-    @staticmethod
-    def _adapt(value):
-        """Return an adapter object whose behavior is triggered by
-        the '==' operator.
-        """
-        if callable(value):
-            func = lambda x: (x is value) or value(x)
-            name = getattr(value, '__name__', repr(value))
-        elif value is Ellipsis:
-            func = lambda x: True  # <- Wildcard (matches everything).
-            name = '...'
-        elif isinstance(value, regex_types):
-            func = lambda x: (x is value) or (value.search(x) is not None)
-            name = 're.compile({0!r})'.format(value.pattern)
-        elif isinstance(value, set):
-            func = lambda x: (x in value) or (x == value)
-            name = repr(value)
-        else:
-            return value  # <- EXIT!
-        return PredicateMatcher(func, name)
+    return _get_matcher(obj)
 
 
 if __name__ == '__main__':
@@ -96,7 +98,7 @@ if __name__ == '__main__':
         def test_equality(self):
             def divisible3or5(x):  # <- Helper function.
                 return (x % 3 == 0) or (x % 5 == 0)
-            adapted = get_predicate._adapt(divisible3or5)
+            adapted = _get_matcher(divisible3or5)
 
             self.assertFalse(adapted == 1)
             self.assertFalse(adapted == 2)
@@ -108,7 +110,7 @@ if __name__ == '__main__':
         def test_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            adapted = get_predicate._adapt(fails_internally)
+            adapted = _get_matcher(fails_internally)
 
             with self.assertRaises(TypeError):
                 self.assertFalse(adapted == 'abc')
@@ -116,82 +118,82 @@ if __name__ == '__main__':
         def test_identity(self):
             def always_false(x):
                 return False
-            adapted = get_predicate._adapt(always_false)
+            adapted = _get_matcher(always_false)
 
             self.assertTrue(adapted ==always_false)
 
         def test_identity_with_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            adapted = get_predicate._adapt(fails_internally)
+            adapted = _get_matcher(fails_internally)
 
             self.assertTrue(adapted == fails_internally)
 
         def test_repr(self):
             def userfunc(x):
                 return True
-            adapted = get_predicate._adapt(userfunc)
+            adapted = _get_matcher(userfunc)
             self.assertEqual(repr(adapted), 'userfunc')
 
             userlambda = lambda x: True
-            adapted = get_predicate._adapt(userlambda)
+            adapted = _get_matcher(userlambda)
             self.assertEqual(repr(adapted), '<lambda>')
 
 
     class TestAdaptedRegex(unittest.TestCase):
         def test_equality(self):
-            adapted = get_predicate._adapt(re.compile('(Ch|H)ann?ukk?ah?'))
+            adapted = _get_matcher(re.compile('(Ch|H)ann?ukk?ah?'))
 
             self.assertTrue(adapted == 'Happy Hanukkah')
             self.assertTrue(adapted == 'Happy Chanukah')
             self.assertFalse(adapted == 'Merry Christmas')
 
         def test_error(self):
-            adapted = get_predicate._adapt(re.compile('abc'))
+            adapted = _get_matcher(re.compile('abc'))
 
             with self.assertRaises(TypeError):
                 self.assertFalse(adapted == 123)  # Regex fails with TypeError.
 
         def test_identity(self):
             regex = re.compile('abc')
-            adapted = get_predicate._adapt(regex)
+            adapted = _get_matcher(regex)
 
             self.assertTrue(adapted == regex)
 
         def test_repr(self):
-            adapted = get_predicate._adapt(re.compile('abc'))
+            adapted = _get_matcher(re.compile('abc'))
 
             self.assertEqual(repr(adapted), "re.compile('abc')")
 
 
     class TestAdaptedSet(unittest.TestCase):
         def test_equality(self):
-            adapted = get_predicate._adapt(set(['a', 'e', 'i', 'o', 'u']))
+            adapted = _get_matcher(set(['a', 'e', 'i', 'o', 'u']))
 
             self.assertTrue(adapted == 'a')
             self.assertFalse(adapted == 'x')
 
         def test_whole_set_equality(self):
-            adapted = get_predicate._adapt(set(['a', 'b', 'c']))
+            adapted = _get_matcher(set(['a', 'b', 'c']))
 
             self.assertTrue(adapted == set(['a', 'b', 'c']))
 
         def test_repr(self):
-            adapted = get_predicate._adapt(set(['a']))
+            adapted = _get_matcher(set(['a']))
 
             self.assertEqual(repr(adapted), repr(set(['a'])))
 
 
     class TestAdaptedEllipsisWildcard(unittest.TestCase):
         def test_equality(self):
-            adapted = get_predicate._adapt(Ellipsis)
+            adapted = _get_matcher(Ellipsis)
 
             self.assertTrue(adapted == 1)
             self.assertTrue(adapted == object())
             self.assertTrue(adapted == None)
 
         def test_repr(self):
-            adapted = get_predicate._adapt(Ellipsis)
+            adapted = _get_matcher(Ellipsis)
 
             self.assertEqual(repr(adapted), '...')
 
