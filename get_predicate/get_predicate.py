@@ -1,7 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import abc
 import re
 
+try:
+    abc.ABC  # New in version 3.4.
+except NameError:
+    _ABC = ABCMeta('ABC', (object,), {})  # <- Using Python 2 and 3
+                                          #    compatible syntax.
+    abc.ABC = _ABC
 
 regex_types = type(re.compile(''))
 
@@ -13,7 +20,21 @@ except NameError:
         return any('__call__' in typ.__dict__ for typ in parent_types)
 
 
-class EqualityAdapter(object):
+class PredicateObject(abc.ABC):
+    """Wrapper to mark objects that implement rich predicate matching."""
+    @abc.abstractmethod
+    def __repr__(self):
+        return super(PredicateObject, self).__repr__()
+
+
+class PredicateTuple(PredicateObject, tuple):
+    """Wrapper to mark tuples that contain one or more PredicateMatcher
+    objects.
+    """
+    pass
+
+
+class PredicateMatcher(PredicateObject):
     """Wrapper to call *func* when evaluating the '==' operator."""
     def __init__(self, func, name):
         self._func = func
@@ -27,18 +48,23 @@ class EqualityAdapter(object):
 
 
 class get_predicate(object):
-    """Return a predicate function made from the given *obj*."""
+    """Return a predicate object suitable for comparing to other
+    values using the equality operator ("==").
+
+    If the original object is already suitable for this purpose,
+    it will be returned unchanged. If special comparison handling
+    is implemented, a PredicateObject instance will be returned
+    instead.
+    """
     def __new__(cls, obj):
         if isinstance(obj, tuple):
-            equality_object =  tuple(cls._adapt(x) for x in obj)
-        else:
-            equality_object = cls._adapt(obj)
+            predicate = tuple(cls._adapt(x) for x in obj)
+            for x in predicate:
+                if isinstance(x, PredicateObject):
+                    return PredicateTuple(predicate)  # <- Wrapper.
+            return obj  # <- Orignal reference.
 
-        def predicate(x):
-            return equality_object == x
-        predicate.__name__ = repr(equality_object)
-
-        return predicate
+        return cls._adapt(obj)
 
     @staticmethod
     def _adapt(value):
@@ -59,7 +85,7 @@ class get_predicate(object):
             name = repr(value)
         else:
             return value  # <- EXIT!
-        return EqualityAdapter(func, name)
+        return PredicateMatcher(func, name)
 
 
 if __name__ == '__main__':
@@ -170,23 +196,63 @@ if __name__ == '__main__':
             self.assertEqual(repr(adapted), '...')
 
 
-    class TestGetPredicate(unittest.TestCase):
-        def test_single_object(self):
-            predicate = get_predicate(1)
+    class TestGetPredicateObject(unittest.TestCase):
+        def test_single_value(self):
+            # Check for PredicateMatcher wrapping.
+            def isodd(x):  # <- Helper function.
+                return x % 2 == 1
+            predicate = get_predicate(isodd)
+            self.assertIsInstance(predicate, PredicateMatcher)
 
-            self.assertTrue(predicate(1))
-            self.assertFalse(predicate(2))
-            self.assertEqual(predicate.__name__, '1')
+            predicate = get_predicate(Ellipsis)
+            self.assertIsInstance(predicate, PredicateMatcher)
 
-        def test_tuple_of_objects(self):
-            predicate = get_predicate(('A', 1))
+            predicate = get_predicate(re.compile('abc'))
+            self.assertIsInstance(predicate, PredicateMatcher)
 
-            self.assertTrue(predicate(('A', 1)))
-            self.assertFalse(predicate(('A', 2)))
-            self.assertFalse(predicate(('B', 1)))
-            self.assertEqual(predicate.__name__, "('A', 1)")
+            predicate = get_predicate(set([1, 2, 3]))
+            self.assertIsInstance(predicate, PredicateMatcher)
 
-        def test_tuple_of_all_adapter_options(self):
+            # When original is adequate, it should be returned unchanged.
+            original = 123
+            predicate = get_predicate(original)
+            self.assertIs(predicate, original)
+
+            original = 'abc'
+            predicate = get_predicate(original)
+            self.assertIs(predicate, original)
+
+            original = ['abc', 123]
+            predicate = get_predicate(original)
+            self.assertIs(predicate, original)
+
+            original = object()
+            predicate = get_predicate(original)
+            self.assertIs(predicate, original)
+
+        def test_tuple_of_values(self):
+            # Check for PredicateTuple wrapping.
+            def isodd(x):  # <- Helper function.
+                return x % 2 == 1
+            predicate = get_predicate((1, isodd))
+            self.assertIsInstance(predicate, PredicateTuple)
+
+            predicate = get_predicate((1, Ellipsis))
+            self.assertIsInstance(predicate, PredicateTuple)
+
+            predicate = get_predicate((1, re.compile('abc')))
+            self.assertIsInstance(predicate, PredicateTuple)
+
+            predicate = get_predicate((1, set([1, 2, 3])))
+            self.assertIsInstance(predicate, PredicateTuple)
+
+            # When tuple contains no PredicateMatcher objects,
+            # the original should be returned unchanged.
+            original = ('abc', 123)
+            predicate = get_predicate(original)
+            self.assertIs(predicate, original)
+
+        def test_integration(self):
             def mycallable(x):  # <- Helper function.
                 return x == '_'
 
@@ -198,15 +264,15 @@ if __name__ == '__main__':
                 (mycallable,  myregex, myset, '_', Ellipsis)
             )
 
-            self.assertTrue(predicate(('_', '_', '_', '_', '_')))   # <- Passes all conditions.
-            self.assertFalse(predicate(('X', '_', '_', '_', '_')))  # <- Callable returns False.
-            self.assertFalse(predicate(('_', 'X', '_', '_', '_')))  # <- Regex has no match.
-            self.assertFalse(predicate(('_', '_', 'X', '_', '_')))  # <- Not in set.
-            self.assertFalse(predicate(('_', '_', '_', 'X', '_')))  # <- Does not equal string.
-            self.assertTrue(predicate(('_', '_', '_', '_', 'X')))   # <- Passes all conditions (wildcard).
+            self.assertTrue(predicate == ('_', '_', '_', '_', '_'))   # <- Passes all conditions.
+            self.assertFalse(predicate == ('X', '_', '_', '_', '_'))  # <- Callable returns False.
+            self.assertFalse(predicate == ('_', 'X', '_', '_', '_'))  # <- Regex has no match.
+            self.assertFalse(predicate == ('_', '_', 'X', '_', '_'))  # <- Not in set.
+            self.assertFalse(predicate == ('_', '_', '_', 'X', '_'))  # <- Does not equal string.
+            self.assertTrue(predicate == ('_', '_', '_', '_', 'X'))   # <- Passes all conditions (wildcard).
 
             expected = "(mycallable, re.compile('_'), {0!r}, '_', ...)".format(myset)
-            self.assertEqual(predicate.__name__, expected)
+            self.assertEqual(repr(predicate), expected)
 
 
     unittest.main()
