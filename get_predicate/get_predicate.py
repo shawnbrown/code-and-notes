@@ -94,6 +94,12 @@ if __name__ == '__main__':
     import unittest
 
 
+    class TestInheritance(unittest.TestCase):
+        def test_inheritance(self):
+            self.assertTrue(issubclass(PredicateTuple, PredicateObject))
+            self.assertTrue(issubclass(PredicateMatcher, PredicateObject))
+
+
     class TestCallableMatcher(unittest.TestCase):
         def test_equality(self):
             def divisible3or5(x):  # <- Helper function.
