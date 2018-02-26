@@ -36,15 +36,15 @@ class PredicateTuple(PredicateObject, tuple):
 
 class PredicateMatcher(PredicateObject):
     """Wrapper to call *func* when evaluating the '==' operator."""
-    def __init__(self, func, name):
+    def __init__(self, func, repr_string):
         self._func = func
-        self._name = name
+        self._repr = repr_string
 
     def __eq__(self, other):
         return self._func(other)
 
     def __repr__(self):
-        return self._name
+        return self._repr
 
 
 def _get_matcher(value):
@@ -94,111 +94,111 @@ if __name__ == '__main__':
     import unittest
 
 
-    class TestAdaptedCallable(unittest.TestCase):
+    class TestCallableMatcher(unittest.TestCase):
         def test_equality(self):
             def divisible3or5(x):  # <- Helper function.
                 return (x % 3 == 0) or (x % 5 == 0)
-            adapted = _get_matcher(divisible3or5)
+            matcher = _get_matcher(divisible3or5)
 
-            self.assertFalse(adapted == 1)
-            self.assertFalse(adapted == 2)
-            self.assertTrue(adapted == 3)
-            self.assertFalse(adapted == 4)
-            self.assertTrue(adapted == 5)
-            self.assertTrue(adapted == 6)
+            self.assertFalse(matcher == 1)
+            self.assertFalse(matcher == 2)
+            self.assertTrue(matcher == 3)
+            self.assertFalse(matcher == 4)
+            self.assertTrue(matcher == 5)
+            self.assertTrue(matcher == 6)
 
         def test_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            adapted = _get_matcher(fails_internally)
+            matcher = _get_matcher(fails_internally)
 
             with self.assertRaises(TypeError):
-                self.assertFalse(adapted == 'abc')
+                self.assertFalse(matcher == 'abc')
 
         def test_identity(self):
             def always_false(x):
                 return False
-            adapted = _get_matcher(always_false)
+            matcher = _get_matcher(always_false)
 
-            self.assertTrue(adapted ==always_false)
+            self.assertTrue(matcher ==always_false)
 
         def test_identity_with_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            adapted = _get_matcher(fails_internally)
+            matcher = _get_matcher(fails_internally)
 
-            self.assertTrue(adapted == fails_internally)
+            self.assertTrue(matcher == fails_internally)
 
         def test_repr(self):
             def userfunc(x):
                 return True
-            adapted = _get_matcher(userfunc)
-            self.assertEqual(repr(adapted), 'userfunc')
+            matcher = _get_matcher(userfunc)
+            self.assertEqual(repr(matcher), 'userfunc')
 
             userlambda = lambda x: True
-            adapted = _get_matcher(userlambda)
-            self.assertEqual(repr(adapted), '<lambda>')
+            matcher = _get_matcher(userlambda)
+            self.assertEqual(repr(matcher), '<lambda>')
 
 
-    class TestAdaptedRegex(unittest.TestCase):
+    class TestRegexMatcher(unittest.TestCase):
         def test_equality(self):
-            adapted = _get_matcher(re.compile('(Ch|H)ann?ukk?ah?'))
+            matcher = _get_matcher(re.compile('(Ch|H)ann?ukk?ah?'))
 
-            self.assertTrue(adapted == 'Happy Hanukkah')
-            self.assertTrue(adapted == 'Happy Chanukah')
-            self.assertFalse(adapted == 'Merry Christmas')
+            self.assertTrue(matcher == 'Happy Hanukkah')
+            self.assertTrue(matcher == 'Happy Chanukah')
+            self.assertFalse(matcher == 'Merry Christmas')
 
         def test_error(self):
-            adapted = _get_matcher(re.compile('abc'))
+            matcher = _get_matcher(re.compile('abc'))
 
             with self.assertRaises(TypeError):
-                self.assertFalse(adapted == 123)  # Regex fails with TypeError.
+                self.assertFalse(matcher == 123)  # Regex fails with TypeError.
 
         def test_identity(self):
             regex = re.compile('abc')
-            adapted = _get_matcher(regex)
+            matcher = _get_matcher(regex)
 
-            self.assertTrue(adapted == regex)
+            self.assertTrue(matcher == regex)
 
         def test_repr(self):
-            adapted = _get_matcher(re.compile('abc'))
+            matcher = _get_matcher(re.compile('abc'))
 
-            self.assertEqual(repr(adapted), "re.compile('abc')")
+            self.assertEqual(repr(matcher), "re.compile('abc')")
 
 
-    class TestAdaptedSet(unittest.TestCase):
+    class TestSetMatcher(unittest.TestCase):
         def test_equality(self):
-            adapted = _get_matcher(set(['a', 'e', 'i', 'o', 'u']))
+            matcher = _get_matcher(set(['a', 'e', 'i', 'o', 'u']))
 
-            self.assertTrue(adapted == 'a')
-            self.assertFalse(adapted == 'x')
+            self.assertTrue(matcher == 'a')
+            self.assertFalse(matcher == 'x')
 
         def test_whole_set_equality(self):
-            adapted = _get_matcher(set(['a', 'b', 'c']))
+            matcher = _get_matcher(set(['a', 'b', 'c']))
 
-            self.assertTrue(adapted == set(['a', 'b', 'c']))
+            self.assertTrue(matcher == set(['a', 'b', 'c']))
 
         def test_repr(self):
-            adapted = _get_matcher(set(['a']))
+            matcher = _get_matcher(set(['a']))
 
-            self.assertEqual(repr(adapted), repr(set(['a'])))
+            self.assertEqual(repr(matcher), repr(set(['a'])))
 
 
-    class TestAdaptedEllipsisWildcard(unittest.TestCase):
+    class TestEllipsisWildcardMatcher(unittest.TestCase):
         def test_equality(self):
-            adapted = _get_matcher(Ellipsis)
+            matcher = _get_matcher(Ellipsis)
 
-            self.assertTrue(adapted == 1)
-            self.assertTrue(adapted == object())
-            self.assertTrue(adapted == None)
+            self.assertTrue(matcher == 1)
+            self.assertTrue(matcher == object())
+            self.assertTrue(matcher == None)
 
         def test_repr(self):
-            adapted = _get_matcher(Ellipsis)
+            matcher = _get_matcher(Ellipsis)
 
-            self.assertEqual(repr(adapted), '...')
+            self.assertEqual(repr(matcher), '...')
 
 
-    class TestGetPredicateObject(unittest.TestCase):
+    class TestGetPredicate(unittest.TestCase):
         def test_single_value(self):
             # Check for PredicateMatcher wrapping.
             def isodd(x):  # <- Helper function.
