@@ -1,5 +1,67 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Predicate objects are used to check that values satisfy a certain
+criteria. The specific behavior of a predicate depends on its type:
+
+    +----------------------+------------------------------------------+
+    | Predicate type       | Checks that                              |
+    +======================+==========================================+
+    | set                  | value is a member of the set             |
+    +----------------------+------------------------------------------+
+    | function             | calling ``function(value)`` returns True |
+    +----------------------+------------------------------------------+
+    | type                 | value is an instance of the type         |
+    +----------------------+------------------------------------------+
+    | re.compile(pattern)  | value matches the regular expression     |
+    +----------------------+------------------------------------------+
+    | str or non-container | value equals predicate                   |
+    +----------------------+------------------------------------------+
+    | tuple of             | tuple of values satisfies corresponding  |
+    | predicates           | tuple of predicates                      |
+    +----------------------+------------------------------------------+
+    | "``...``" (an        | (used as a wildcard, matches any value)  |
+    | ellipsis)            |                                          |
+    +----------------------+------------------------------------------+
+
+
+Some Examples:
+
+    +---------------------------+----------------+---------+
+    | Example Predicate         | Example Value  | Matches |
+    +===========================+================+=========+
+    | .. code-block:: python    | ``'A'``        | Yes     |
+    |                           +----------------+---------+
+    |     {'A', 'B'}            | ``'C'``        | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``4``          | Yes     |
+    |                           +----------------+---------+
+    |     def iseven(x):        | ``9``          | No      |
+    |         return x % 2 == 0 |                |         |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``1.0``        | Yes     |
+    |                           +----------------+---------+
+    |     float                 | ``1``          | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'bake'``     | Yes     |
+    |                           +----------------+---------+
+    |     re.compile('[bc]ake') | ``'cake'``     | Yes     |
+    |                           +----------------+---------+
+    |                           | ``'fake'``     | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'foo'``      | Yes     |
+    |                           +----------------+---------+
+    |     'foo'                 | ``'bar'``      | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``('A', 'X')`` | Yes     |
+    |                           +----------------+---------+
+    |     ('A', ...)            | ``('A', 'Y')`` | Yes     |
+    |                           +----------------+---------+
+    | Uses ellipsis wildcard.   | ``('B', 'X')`` | No      |
+    +---------------------------+----------------+---------+
+
+"""
+
 import abc
 import re
 
@@ -35,9 +97,9 @@ class PredicateTuple(PredicateObject, tuple):
 
 
 class PredicateMatcher(PredicateObject):
-    """Wrapper to call *func* when evaluating the '==' operator."""
-    def __init__(self, func, repr_string):
-        self._func = func
+    """Wrapper to call *function* when evaluating the '==' operator."""
+    def __init__(self, function, repr_string):
+        self._func = function
         self._repr = repr_string
 
     def __eq__(self, other):
@@ -55,21 +117,24 @@ def _get_matcher(value):
     PredicateMatcher instance. When no special comparison is
     needed, returns the original object unchanged.
     """
-    if callable(value):
-        func = lambda x: (x is value) or value(x)
-        name = getattr(value, '__name__', repr(value))
+    if isinstance(value, type):
+        function = lambda x: (x is value) or isinstance(x, value)
+        repr_string = getattr(value, '__name__', repr(value))
+    elif callable(value):
+        function = lambda x: (x is value) or value(x)
+        repr_string = getattr(value, '__name__', repr(value))
     elif value is Ellipsis:
-        func = lambda x: True  # <- Wildcard (matches everything).
-        name = '...'
+        function = lambda x: True  # <- Wildcard (matches everything).
+        repr_string = '...'
     elif isinstance(value, regex_types):
-        func = lambda x: (x is value) or (value.search(x) is not None)
-        name = 're.compile({0!r})'.format(value.pattern)
+        function = lambda x: (x is value) or (value.search(x) is not None)
+        repr_string = 're.compile({0!r})'.format(value.pattern)
     elif isinstance(value, set):
-        func = lambda x: (x in value) or (x == value)
-        name = repr(value)
+        function = lambda x: (x in value) or (x == value)
+        repr_string = repr(value)
     else:
         return value  # <- EXIT!
-    return PredicateMatcher(func, name)
+    return PredicateMatcher(function, repr_string)
 
 
 def get_predicate(obj):
@@ -99,6 +164,14 @@ if __name__ == '__main__':
             self.assertTrue(issubclass(PredicateTuple, PredicateObject))
             self.assertTrue(issubclass(PredicateMatcher, PredicateObject))
 
+    class TestTypeMatcher(unittest.TestCase):
+        def test_isinstance(self):
+            matcher = _get_matcher(int)
+
+            self.assertTrue(matcher == 0)
+            self.assertTrue(matcher == 1)
+            self.assertFalse(matcher == 0.0)
+            self.assertFalse(matcher == 1.0)
 
     class TestCallableMatcher(unittest.TestCase):
         def test_equality(self):
