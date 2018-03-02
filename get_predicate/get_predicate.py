@@ -67,8 +67,8 @@ import re
 
 try:
     abc.ABC  # New in version 3.4.
-except NameError:
-    _ABC = ABCMeta('ABC', (object,), {})  # <- Using Python 2 and 3
+except AttributeError:
+    _ABC = abc.ABCMeta('ABC', (object,), {})  # <- Using Python 2 and 3
                                           #    compatible syntax.
     abc.ABC = _ABC
 
@@ -278,6 +278,11 @@ if __name__ == '__main__':
 
 
     class TestGetPredicate(unittest.TestCase):
+        def assertIsInstance(self, obj, cls, msg=None):  # New in Python 3.2.
+            if not isinstance(obj, cls):
+                standardMsg = '%s is not an instance of %r' % (safe_repr(obj), cls)
+                self.fail(self._formatMessage(msg, standardMsg))
+
         def test_single_value(self):
             # Check for PredicateMatcher wrapping.
             def isodd(x):  # <- Helper function.
