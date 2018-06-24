@@ -13,9 +13,22 @@ except NameError:
     string_types = (str,)
 
 try:
-    file_types = (file, io.IOBase)
-except NameError:
+    from StringIO import StringIO
+    file_types = (io.IOBase, file, StringIO)
+except (ImportError, NameError):
     file_types = (io.IOBase,)
+
+
+def seekable(buf):
+    """Returns True if *buf* is a seekable file-like buffer."""
+    try:
+        return buf.seekable()
+    except AttributeError:
+        try:
+            buf.seek(buf.tell())  # <- For StringIO in Python 2.
+            return True
+        except Exception:
+            return False
 
 
 def exhaustible(iterable):
@@ -49,7 +62,7 @@ def load_csv(cursor, table, csvfile, encoding=None, **kwds):
     # When the encoding is unspecified, try to load *csvfile* using the
     # preferred encoding and failing that, try the fallback encodings:
 
-    if isinstance(csvfile, file_types) and csvfile.seekable():
+    if isinstance(csvfile, file_types) and seekable(csvfile):
         position = csvfile.tell()  # Get current position if
     else:                          # csvfile is file-like and
         position = None            # supports random access.
@@ -117,6 +130,11 @@ if __name__ == '__main__':
     except NameError:
         pass
 
+    try:
+        from StringIO import StringIO
+    except ImportError:
+        StringIO = None
+
 
     class TestLoadCsv(unittest.TestCase):
         def setUp(self):
@@ -181,6 +199,28 @@ if __name__ == '__main__':
                     b'3,\xfe\n'  # '\xfe' -> þ (thorn)
                 ), encoding='latin-1')
                 load_csv(self.cursor, 'testtable1', csvfile)  # <- No encoding arg.
+
+            expected = [
+                ('1', chr(0xe6)),  # chr(0xe6) -> æ
+                ('2', chr(0xf0)),  # chr(0xf0) -> ð
+                ('3', chr(0xfe)),  # chr(0xfe) -> þ
+            ]
+            self.cursor.execute('SELECT col1, col2 FROM testtable1')
+            self.assertEqual(list(self.cursor), expected)
+
+        def test_fallback_with_StringIO(self):
+            if not StringIO:  # <- Python 2.x only.
+                return
+
+            csvfile = StringIO(
+                b'col1,col2\n'
+                b'1,\xe6\n'  # '\xe6' -> æ (ash)
+                b'2,\xf0\n'  # '\xf0' -> ð (eth)
+                b'3,\xfe\n'  # '\xfe' -> þ (thorn)
+            )
+
+            with warnings.catch_warnings(record=True):
+                load_csv(self.cursor, 'testtable1', csvfile)
 
             expected = [
                 ('1', chr(0xe6)),  # chr(0xe6) -> æ
