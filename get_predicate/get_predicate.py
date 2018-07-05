@@ -302,24 +302,6 @@ if __name__ == '__main__':
         def test_equality(self):
             matcher = _get_matcher(True)
 
-            self.assertTrue(matcher == 1)
-            self.assertTrue(matcher == object())
-            self.assertTrue(matcher == 'x')
-            self.assertFalse(matcher == '')
-            self.assertFalse(matcher == 0.0)
-            self.assertFalse(matcher == [])
-            self.assertFalse(matcher == range(0))
-
-        def test_repr(self):
-            matcher = _get_matcher(True)
-
-            self.assertEqual(repr(matcher), 'True')
-
-
-    class TestTruthyMatcher(unittest.TestCase):
-        def test_equality(self):
-            matcher = _get_matcher(True)
-
             self.assertTrue(matcher == 'x')
             self.assertTrue(matcher == 1.0)
             self.assertTrue(matcher == [1])
