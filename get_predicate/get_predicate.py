@@ -20,6 +20,10 @@ criteria. The specific behavior of a predicate depends on its type:
     | tuple of             | tuple of values satisfies corresponding  |
     | predicates           | tuple of predicates                      |
     +----------------------+------------------------------------------+
+    | True                 | value is truthy (truth value is True)    |
+    +----------------------+------------------------------------------+
+    | False                | value is falsy (truth value is False)    |
+    +----------------------+------------------------------------------+
     | "``...``" (an        | (used as a wildcard, matches any value)  |
     | ellipsis)            |                                          |
     +----------------------+------------------------------------------+
@@ -52,6 +56,14 @@ Some Examples:
     | .. code-block:: python    | ``'foo'``      | Yes     |
     |                           +----------------+---------+
     |     'foo'                 | ``'bar'``      | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'x'``        | Yes     |
+    |                           +----------------+---------+
+    |     True                  | ``''``         | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``''``         | Yes     |
+    |                           +----------------+---------+
+    |     False                 | ``'x'``        | No      |
     +---------------------------+----------------+---------+
     | .. code-block:: python    | ``('A', 'X')`` | Yes     |
     |                           +----------------+---------+
@@ -129,6 +141,12 @@ def _get_matcher(value):
     elif value is Ellipsis:
         function = lambda x: True  # <- Wildcard (matches everything).
         repr_string = '...'
+    elif value is True:
+        function = lambda x: bool(x)  # <- Truthy.
+        repr_string = 'True'
+    elif value is False:
+        function = lambda x: not bool(x)  # <- Falsy.
+        repr_string = 'False'
     elif isinstance(value, regex_types):
         function = lambda x: (x is value) or (value.search(x) is not None)
         repr_string = 're.compile({0!r})'.format(value.pattern)
@@ -278,6 +296,76 @@ if __name__ == '__main__':
             matcher = _get_matcher(Ellipsis)
 
             self.assertEqual(repr(matcher), '...')
+
+
+    class TestTruthyMatcher(unittest.TestCase):
+        def test_equality(self):
+            matcher = _get_matcher(True)
+
+            self.assertTrue(matcher == 1)
+            self.assertTrue(matcher == object())
+            self.assertTrue(matcher == 'x')
+            self.assertFalse(matcher == '')
+            self.assertFalse(matcher == 0.0)
+            self.assertFalse(matcher == [])
+            self.assertFalse(matcher == range(0))
+
+        def test_repr(self):
+            matcher = _get_matcher(True)
+
+            self.assertEqual(repr(matcher), 'True')
+
+
+    class TestTruthyMatcher(unittest.TestCase):
+        def test_equality(self):
+            matcher = _get_matcher(True)
+
+            self.assertTrue(matcher == 'x')
+            self.assertTrue(matcher == 1.0)
+            self.assertTrue(matcher == [1])
+            self.assertTrue(matcher == range(1))
+
+            self.assertFalse(matcher == '')
+            self.assertFalse(matcher == 0.0)
+            self.assertFalse(matcher == [])
+            self.assertFalse(matcher == range(0))
+
+        def test_number_one(self):
+            matcher = _get_matcher(1)  # <- Should not match True
+
+            self.assertTrue(matcher == 1.0)
+            self.assertFalse(matcher == 'x')
+
+        def test_repr(self):
+            matcher = _get_matcher(True)
+
+            self.assertEqual(repr(matcher), 'True')
+
+
+    class TestFalsyMatcher(unittest.TestCase):
+        def test_equality(self):
+            matcher = _get_matcher(False)
+
+            self.assertFalse(matcher == 'x')
+            self.assertFalse(matcher == 1.0)
+            self.assertFalse(matcher == [1])
+            self.assertFalse(matcher == range(1))
+
+            self.assertTrue(matcher == '')
+            self.assertTrue(matcher == 0.0)
+            self.assertTrue(matcher == [])
+            self.assertTrue(matcher == range(0))
+
+        def test_number_zero(self):
+            matcher = _get_matcher(0)  # <- Should not match False
+
+            self.assertTrue(matcher == 0.0)
+            self.assertFalse(matcher == '')
+
+        def test_repr(self):
+            matcher = _get_matcher(False)
+
+            self.assertEqual(repr(matcher), 'False')
 
 
     class TestGetPredicate(unittest.TestCase):
