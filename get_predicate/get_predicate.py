@@ -123,6 +123,11 @@ class PredicateMatcher(PredicateObject):
     def __repr__(self):
         return self._repr
 
+# Special predicate functions.
+_wildcard = lambda x: True
+_is_truthy = lambda x: bool(x)
+_is_falsy = lambda x: not bool(x)
+
 
 def _get_matcher(value):
     """Return an object suitable for comparing to other values
@@ -139,13 +144,13 @@ def _get_matcher(value):
         function = lambda x: (x is value) or value(x)
         repr_string = getattr(value, '__name__', repr(value))
     elif value is Ellipsis:
-        function = lambda x: True  # <- Wildcard (matches everything).
+        function = _wildcard  # <- Matches everything.
         repr_string = '...'
     elif value is True:
-        function = lambda x: bool(x)  # <- Truthy.
+        function = _is_truthy
         repr_string = 'True'
     elif value is False:
-        function = lambda x: not bool(x)  # <- Falsy.
+        function = _is_falsy
         repr_string = 'False'
     elif isinstance(value, regex_types):
         function = lambda x: (x is value) or (value.search(x) is not None)
