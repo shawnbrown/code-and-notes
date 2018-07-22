@@ -23,8 +23,28 @@ class SequenceComposite(Sequence):
         >>> group = group.upper()
         >>> x, y = group
     """
-    pass
+    def __init__(self, obj1, obj2, *objs):
+        self._objs = (obj1, obj2) + objs
+
+    def __getitem__(self, key):
+        return self._objs[key]
+
+    def __len__(self):
+        return len(self._objs)
 
 
 class MappingComposite(Mapping):
     pass
+
+
+if __name__ == '__main__':
+    import unittest
+
+
+    class TestSequenceComposite(unittest.TestCase):
+        def test_instantiation(self):
+            composite = SequenceComposite('foo', 'bar')
+            self.assertIsInstance(composite, Sequence)
+
+
+    unittest.main()
