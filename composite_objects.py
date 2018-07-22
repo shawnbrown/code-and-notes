@@ -37,8 +37,8 @@ class MappingComposite(Mapping):
     """A container to treat a group of objects as a single object.
 
     Method calls and property references are passed to the individual
-    objects and a new MappingComposite is returned that contains the
-    results::
+    values and a new MappingComposite is returned that contains the
+    resulting values associated with the original keys::
 
         >>> group = MappingComposite({'x': 'foo', 'y': 'bar'})
         >>> group.upper()
