@@ -34,7 +34,43 @@ class SequenceComposite(Sequence):
 
 
 class MappingComposite(Mapping):
-    pass
+    """A container to treat a group of objects as a single object.
+
+    Method calls and property references are passed to the individual
+    objects and a new MappingComposite is returned that contains the
+    results::
+
+        >>> group = MappingComposite({'x': 'foo', 'y': 'bar'})
+        >>> group.upper()
+        MappingComposite({'x': 'FOO', 'y': 'BAR'})
+
+    MappingComposite is a well-behaved mapping and its contents can
+    be accessed by obj[key] or calls to keys(), values() or items()
+    methods::
+
+        >>> group = MappingComposite({'x': 'foo', 'y': 'bar'})
+        >>> group = group.upper()
+        >>> x = group['x']
+        >>> y = group['y']
+    """
+    def __init__(self, obj=None, **kwds):
+        if not obj and or kwds:
+            cls_name = self.__class__.__name__
+            raise TypeError('{0} requires at least 1 item'.format(cls_name))
+
+        if obj:
+            self._objs = dict(obj, **kwds)
+        else:
+            self._objs = dict(**kwds)
+
+    def __getitem__(self, key):
+        return self._objs[key]
+
+    def __iter__(self):
+        return iter(self._objs)
+
+    def __len__(self):
+        return len(self._objs)
 
 
 if __name__ == '__main__':
@@ -45,6 +81,12 @@ if __name__ == '__main__':
         def test_instantiation(self):
             composite = SequenceComposite('foo', 'bar')
             self.assertIsInstance(composite, Sequence)
+
+
+    class TestMappingComposite(unittest.TestCase):
+        def test_instantiation(self):
+            composite = MappingComposite({'x': 'foo', 'y': 'bar'})
+            self.assertIsInstance(composite, Mapping)
 
 
     unittest.main()
