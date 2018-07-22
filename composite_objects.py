@@ -23,11 +23,11 @@ class SequenceComposite(Sequence):
         >>> group = group.upper()
         >>> x, y = group
     """
-    def __init__(self, obj1, obj2, *objs):
-        self._objs = (obj1, obj2) + objs
+    def __init__(self, obj, *objs):
+        self._objs = (obj,) + objs
 
-    def __getitem__(self, key):
-        return self._objs[key]
+    def __getitem__(self, index):
+        return self._objs[index]
 
     def __len__(self):
         return len(self._objs)
