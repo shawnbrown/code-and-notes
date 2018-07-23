@@ -54,7 +54,7 @@ class MappingComposite(Mapping):
         >>> y = group['y']
     """
     def __init__(self, obj=None, **kwds):
-        if not obj and or kwds:
+        if not (obj or kwds):
             cls_name = self.__class__.__name__
             raise TypeError('{0} requires at least 1 item'.format(cls_name))
 
