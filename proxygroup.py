@@ -33,5 +33,12 @@ if __name__ == '__main__':
             self.assertEqual(group._keys, ['a', 'b', 'c'])
             self.assertEqual(group._objs, [1, 2, 3])
 
+        def test_iteration(self):
+            group = ProxyGroup([1, 2, 3])
+            self.assertEqual(list(group), [1, 2, 3])
+
+            group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
+            self.assertEqual(list(group), [('a', 1), ('b', 2), ('c', 3)])
+
 
     unittest.main()
