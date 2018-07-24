@@ -26,6 +26,19 @@ class ProxyGroup(Iterable):
             return iter(zip(self._keys, self._objs))
         return iter(self._objs)
 
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        if self._keys:
+            zipped = zip(self._keys, self._objs)
+            obj_reprs = ('{0!r}: {1!r}'.format(k, v) for k, v in zipped)
+            obj_reprs = '{{{0}}}'.format(', '.join(obj_reprs))
+        else:
+            obj_reprs = (repr(x) for x in self._objs)
+            obj_reprs = '[{0}]'.format(', '.join(obj_reprs))
+
+        return '{0}({1})'.format(cls_name, obj_reprs)
+
+
 
 if __name__ == '__main__':
     import unittest
@@ -56,6 +69,13 @@ if __name__ == '__main__':
         def test_iter_mapping(self):
             group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
             self.assertEqual(list(group), [('a', 1), ('b', 2), ('c', 3)])
+
+        def test_repr(self):
+            group = ProxyGroup([1, 2, 3])
+            self.assertEqual(repr(group), 'ProxyGroup([1, 2, 3])')
+
+            group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
+            self.assertEqual(repr(group), "ProxyGroup({'a': 1, 'b': 2, 'c': 3})")
 
 
     unittest.main()
