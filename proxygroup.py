@@ -69,6 +69,10 @@ class ProxyGroup(Iterable):
         return group
 
 
+_magic_methods = ['__add__', '__sub__']
+
+
+
 if __name__ == '__main__':
     import unittest
 
@@ -118,7 +122,7 @@ if __name__ == '__main__':
         def test_call(self):
             group = ProxyGroup(['foo', 'bar'])
             result = group.upper()
-            self.assertIsInstance(group, ProxyGroup)
+            self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, ['FOO', 'BAR'])
 
 
