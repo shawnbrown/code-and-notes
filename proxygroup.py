@@ -39,7 +39,12 @@ class ProxyGroup(Iterable):
         return '{0}({1})'.format(cls_name, obj_reprs)
 
     def __getattr__(self, name):
-        group = self.__class__(getattr(x, name) for x in self._objs)
+        group = self.__class__(getattr(obj, name) for obj in self._objs)
+        group._keys = self._keys
+        return group
+
+    def __call__(self, *args, **kwds):
+        group = self.__class__(obj(*args, **kwds) for obj in self._objs)
         group._keys = self._keys
         return group
 
@@ -90,5 +95,12 @@ if __name__ == '__main__':
             group = group.attr
             self.assertIsInstance(group, ProxyGroup)
             self.assertEqual(group._objs, [123, 456])
+
+        def test_call(self):
+            group = ProxyGroup(['foo', 'bar'])
+            result = group.upper()
+            self.assertIsInstance(group, ProxyGroup)
+            self.assertEqual(result._objs, ['FOO', 'BAR'])
+
 
     unittest.main()
