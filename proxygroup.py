@@ -87,14 +87,13 @@ if __name__ == '__main__':
             self.assertEqual(repr(group), "ProxyGroup({'a': 1, 'b': 2, 'c': 3})")
 
         def test_getattr(self):
-            class MyClass(object):
-                def __init__(self, arg):
-                    self.attr = arg
+            class ExampleClass(object):
+                attr = 123
 
-            group = ProxyGroup([MyClass(123), MyClass(456)])
+            group = ProxyGroup([ExampleClass(), ExampleClass()])
             group = group.attr
             self.assertIsInstance(group, ProxyGroup)
-            self.assertEqual(group._objs, [123, 456])
+            self.assertEqual(group._objs, [123, 123])
 
         def test_call(self):
             group = ProxyGroup(['foo', 'bar'])
