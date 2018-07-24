@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from collections.abc import Iterable
 from collections.abc import Mapping
+from functools import partial
 
 
 class ProxyGroup(Iterable):
@@ -69,8 +70,24 @@ class ProxyGroup(Iterable):
         return group
 
 
-_magic_methods = ['__add__', '__sub__']
+def _define_special_attribute_proxies(proxy_class):
+    special_attributes = """
+        add sub mul mod truediv floordiv div
+        getitem setitem delitem
+        lt le eq ne gt ge
+    """.split()
 
+    def proxy_getattr(self, name):
+        group = self.__class__(getattr(obj, name) for obj in self._objs)
+        group._keys = self._keys
+        return group
+
+    for name in special_attributes:
+        dunder = '__{0}__'.format(name)
+        method = partial(proxy_getattr, name=dunder)
+        setattr(proxy_class, dunder, property(method))
+
+_define_special_attribute_proxies(ProxyGroup)
 
 
 if __name__ == '__main__':
@@ -124,6 +141,18 @@ if __name__ == '__main__':
             result = group.upper()
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, ['FOO', 'BAR'])
+
+        def test__add__(self):
+            group = ProxyGroup([1, 2])
+            result = group + 100
+            self.assertIsInstance(result, ProxyGroup)
+            self.assertEqual(result._objs, [101, 102])
+
+        def test__getattr__(self):
+            group = ProxyGroup(['abc', 'xyz'])
+            result = group[:2]
+            self.assertIsInstance(result, ProxyGroup)
+            self.assertEqual(result._objs, ['ab', 'xy'])
 
 
     unittest.main()
