@@ -5,6 +5,26 @@ from collections.abc import Mapping
 
 
 class ProxyGroup(Iterable):
+    """
+    Method calls and property references are passed to the individual
+    objects and a new ProxyGroup is returned containing the results::
+
+        >>> group = ProxyGroup(['foo', 'bar'])
+        >>> group.upper()
+        ProxyGroup(['FOO', 'BAR'])
+
+    ProxyGroup is an iterable and individual items can be accessed
+    through iteration or sequence unpacking. Below, the individual
+    objects are unpacked into the variables ``x`` and ``y``::
+
+        >>> group = ProxyGroup(['foo', 'bar'])
+        >>> group = group.upper()
+        >>> x, y = group
+        >>> x
+        'FOO'
+        >>> y
+        'BAR'
+    """
     def __init__(self, iterable):
         if not isinstance(iterable, Iterable):
             msg = '{0!r} object is not iterable'
