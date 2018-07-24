@@ -155,7 +155,7 @@ if __name__ == '__main__':
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, [101, 102])
 
-        def test__getattr__(self):
+        def test__getitem__(self):
             group = ProxyGroup(['abc', 'xyz'])
             result = group[:2]  # <- __getattr__()
             self.assertIsInstance(result, ProxyGroup)
