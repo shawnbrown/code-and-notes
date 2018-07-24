@@ -73,6 +73,7 @@ class ProxyGroup(Iterable):
 def _define_special_attribute_proxies(proxy_class):
     special_attributes = """
         add sub mul mod truediv floordiv div
+        radd rsub rmul rmod rtruediv rfloordiv rdiv
         getitem setitem delitem
         lt le eq ne gt ge
     """.split()
@@ -144,13 +145,19 @@ if __name__ == '__main__':
 
         def test__add__(self):
             group = ProxyGroup([1, 2])
-            result = group + 100
+            result = group + 100  # <- __add__()
+            self.assertIsInstance(result, ProxyGroup)
+            self.assertEqual(result._objs, [101, 102])
+
+        def test__radd__(self):
+            group = ProxyGroup([1, 2])
+            result = 100 + group  # <- __radd__()
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, [101, 102])
 
         def test__getattr__(self):
             group = ProxyGroup(['abc', 'xyz'])
-            result = group[:2]
+            result = group[:2]  # <- __getattr__()
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, ['ab', 'xy'])
 
