@@ -3,6 +3,8 @@
 from collections.abc import Iterable
 from collections.abc import Mapping
 from functools import partial
+from itertools import chain
+from itertools import zip_longest
 
 
 class ProxyGroup(Iterable):
@@ -68,6 +70,41 @@ class ProxyGroup(Iterable):
         group = self.__class__(obj(*args, **kwds) for obj in self._objs)
         group._keys = self._keys
         return group
+
+    def _expand_args(self, *args, **kwds):
+        arg_values = chain(args, kwds.values())
+        if not any(isinstance(x, ProxyGroup) for x in arg_values):
+            return None
+
+        len_objs = len(self._objs)
+
+        expanded_args = []
+        for arg in args:
+            if isinstance(arg, ProxyGroup) and len(arg._objs) == len_objs:
+                expanded_args.append(arg._objs)
+            else:
+                expanded_args.append([arg] * len_objs)
+        if expanded_args:
+            zipped_args = list(zip(*expanded_args))
+        else:
+            zipped_args = [tuple()] * len_objs
+
+
+        expanded_kwds = {}
+        for key, value in kwds.items():
+            if isinstance(value, ProxyGroup) \
+                    and len(value._objs) == len_objs:
+                expanded_kwds[key] = value._objs
+            else:
+                expanded_kwds[key] = [value] * len_objs
+
+        if expanded_kwds:
+            expanded_values = list(zip(*expanded_kwds.values()))
+            zipped_kwds = [dict(zip(kwds.keys(), x)) for x in expanded_values]
+        else:
+            zipped_kwds = [{}] * len_objs
+
+        return list(zip(zipped_args, zipped_kwds))
 
 
 def _define_special_attribute_proxies(proxy_class):
@@ -137,6 +174,54 @@ if __name__ == '__main__':
             self.assertIsInstance(group, ProxyGroup)
             self.assertEqual(group._objs, [123, 123])
 
+        def test_expand_arguments(self):
+            group = ProxyGroup([5, 10])
+
+            # Arguments.
+            result = group._expand_args(1, 2)
+            self.assertIsNone(result, msg='if no args to expand, returns None')
+
+            result = group._expand_args(ProxyGroup([2, 4]))
+            expected = [
+                ((2,), {}),
+                ((4,), {}),
+            ]
+            self.assertEqual(result, expected)
+
+            result = group._expand_args(1, ProxyGroup([2, 4]))
+            expected = [
+                ((1, 2), {}),
+                ((1, 4), {}),
+            ]
+            self.assertEqual(result, expected)
+
+            # Keywords.
+            result = group._expand_args(foo=1, bar=2)
+            self.assertIsNone(result, msg='if no args or kwds to expand, returns None')
+
+            result = group._expand_args(foo=ProxyGroup([2, 4]))
+            expected = [
+                (tuple(), {'foo': 2}),
+                (tuple(), {'foo': 4}),
+            ]
+            self.assertEqual(result, expected)
+
+            result = group._expand_args(foo=1, bar=ProxyGroup([2, 4]))
+            expected = [
+                (tuple(), {'foo': 1, 'bar': 2}),
+                (tuple(), {'foo': 1, 'bar': 4}),
+            ]
+            self.assertEqual(result, expected)
+
+            # Arguments and keywords (all cases).
+            result = group._expand_args('x', ProxyGroup(['y', 'z']),
+                                        foo=1, bar=ProxyGroup([2, 4]))
+            expected = [
+                (('x', 'y'), {'foo': 1, 'bar': 2}),
+                (('x', 'z'), {'foo': 1, 'bar': 4}),
+            ]
+            self.assertEqual(result, expected)
+
         def test_call(self):
             group = ProxyGroup(['foo', 'bar'])
             result = group.upper()
@@ -157,7 +242,7 @@ if __name__ == '__main__':
 
         def test__getitem__(self):
             group = ProxyGroup(['abc', 'xyz'])
-            result = group[:2]  # <- __getattr__()
+            result = group[:2]  # <- __getitem__()
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, ['ab', 'xy'])
 
