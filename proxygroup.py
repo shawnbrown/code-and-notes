@@ -1,10 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from collections.abc import Iterable
-from collections.abc import Mapping
 from functools import partial
 from itertools import chain
-from itertools import zip_longest
+
+try:
+    from collections.abc import Iterable
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Iterable
+    from collections import Mapping
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 
 class ProxyGroup(Iterable):
