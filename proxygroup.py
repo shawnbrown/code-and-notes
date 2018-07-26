@@ -75,18 +75,6 @@ class ProxyGroup(Iterable):
         group._keys = self._keys
         return group
 
-    def __call__(self, *args, **kwds):
-        expanded = self._expand_args(*args, **kwds)
-        if expanded:
-            zipped = zip(self._objs, expanded)
-            iterable = (obj(*a, **k) for (obj, (a, k)) in zipped)
-        else:
-            iterable = (obj(*args, **kwds) for obj in self._objs)
-
-        group = self.__class__(iterable)
-        group._keys = self._keys
-        return group
-
     def _expand_args(self, *args, **kwds):
         arg_values = chain(args, kwds.values())
         if not any(isinstance(x, ProxyGroup) for x in arg_values):
@@ -121,6 +109,18 @@ class ProxyGroup(Iterable):
             zipped_kwds = [{}] * len_objs
 
         return list(zip(zipped_args, zipped_kwds))
+
+    def __call__(self, *args, **kwds):
+        expanded = self._expand_args(*args, **kwds)
+        if expanded:
+            zipped = zip(self._objs, expanded)
+            iterable = (obj(*a, **k) for (obj, (a, k)) in zipped)
+        else:
+            iterable = (obj(*args, **kwds) for obj in self._objs)
+
+        group = self.__class__(iterable)
+        group._keys = self._keys
+        return group
 
 
 def _define_special_attribute_proxies(proxy_class):
