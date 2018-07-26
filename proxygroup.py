@@ -78,27 +78,27 @@ class ProxyGroup(Iterable):
 
         len_objs = len(self._objs)
 
-        expanded_args = []
-        for arg in args:
-            if isinstance(arg, ProxyGroup) and len(arg._objs) == len_objs:
-                expanded_args.append(arg._objs)
-            else:
-                expanded_args.append([arg] * len_objs)
-        if expanded_args:
+        is_expandable = \
+            lambda x: isinstance(x, ProxyGroup) and len(x._objs) == len_objs
+
+        if args:
+            def expand_arg(arg):
+                if is_expandable(arg):
+                    return arg._objs
+                return [arg] * len_objs
+
+            expanded_args = [expand_arg(arg) for arg in args]
             zipped_args = list(zip(*expanded_args))
         else:
             zipped_args = [tuple()] * len_objs
 
+        if kwds:
+            def expand_kwd(key, value):
+                if is_expandable(value):
+                    return key, value._objs
+                return key, [value] * len_objs
 
-        expanded_kwds = {}
-        for key, value in kwds.items():
-            if isinstance(value, ProxyGroup) \
-                    and len(value._objs) == len_objs:
-                expanded_kwds[key] = value._objs
-            else:
-                expanded_kwds[key] = [value] * len_objs
-
-        if expanded_kwds:
+            expanded_kwds = dict(expand_kwd(k, v) for k, v in kwds.items())
             expanded_values = list(zip(*expanded_kwds.values()))
             zipped_kwds = [dict(zip(kwds.keys(), x)) for x in expanded_values]
         else:
