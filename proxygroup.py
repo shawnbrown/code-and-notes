@@ -16,7 +16,27 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 
 
-class ProxyGroup(Iterable):
+class ProxyGroupBase(Iterable):
+    """A base class to provide magic methods that operate directly
+    on a ProxyGroup itself (rather than on the objects it contains).
+
+    These methods must be accessed using super()::
+
+        >>> group1 = ProxyGroup(['foo', 'bar'])
+        >>> group2 = ProxyGroup(['foo', 'bar'])
+        >>> super(ProxyGroup, group1).__eq__(group2)
+        True
+    """
+    def __eq__(self, other):
+        return (isinstance(other, ProxyGroupBase)
+                and self._objs == getattr(other, '_objs', None)
+                and self._keys == getattr(other, '_keys', None))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class ProxyGroup(ProxyGroupBase):
     """
     Method calls and property references are passed to the individual
     objects and a new ProxyGroup is returned containing the results::
@@ -275,6 +295,19 @@ if __name__ == '__main__':
             group_of_strings = ProxyGroup(['abc', 'abc'])
             group = group_of_strings[group_of_indexes]
             self.assertEqual(group._objs, ['a', 'b'])
+
+    class TestProxyGroupBaseMethods(unittest.TestCase):
+        def test__eq__(self):
+            group1 = ProxyGroup(['foo', 'bar'])
+            group2 = ProxyGroup(['foo', 'bar'])
+
+            result = group1.__eq__(group2)
+            self.assertIsInstance(result, ProxyGroup,
+                                  msg='comparison runs on ProxyGroup contents')
+
+            result = super(ProxyGroup, group1).__eq__(group2)
+            self.assertIs(
+                result, True, msg='comparison runs on ProxyGroup itself')
 
 
     unittest.main()
