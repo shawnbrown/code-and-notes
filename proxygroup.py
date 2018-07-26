@@ -155,9 +155,10 @@ if __name__ == '__main__':
             self.assertEqual(group._objs, [1, 2, 3])
 
         def test_init_mapping(self):
+            data = {'a': 1, 'b': 2, 'c': 3}
             group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
-            self.assertEqual(group._keys, ['a', 'b', 'c'])
-            self.assertEqual(group._objs, [1, 2, 3])
+            self.assertEqual(group._keys, list(data.keys()))
+            self.assertEqual(group._objs, list(data.values()))
 
         def test_init_exceptions(self):
             with self.assertRaises(TypeError):
@@ -172,14 +173,14 @@ if __name__ == '__main__':
 
         def test_iter_mapping(self):
             group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
-            self.assertEqual(list(group), [('a', 1), ('b', 2), ('c', 3)])
+            self.assertEqual(set(group), set([('a', 1), ('b', 2), ('c', 3)]))
 
         def test_repr(self):
             group = ProxyGroup([1, 2, 3])
             self.assertEqual(repr(group), 'ProxyGroup([1, 2, 3])')
 
-            group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
-            self.assertEqual(repr(group), "ProxyGroup({'a': 1, 'b': 2, 'c': 3})")
+            group = ProxyGroup({'a': 1})
+            self.assertEqual(repr(group), "ProxyGroup({'a': 1})")
 
         def test_getattr(self):
             class ExampleClass(object):
