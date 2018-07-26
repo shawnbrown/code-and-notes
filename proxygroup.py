@@ -67,7 +67,14 @@ class ProxyGroup(Iterable):
         return group
 
     def __call__(self, *args, **kwds):
-        group = self.__class__(obj(*args, **kwds) for obj in self._objs)
+        expanded = self._expand_args(*args, **kwds)
+        if expanded:
+            zipped = zip(self._objs, expanded)
+            iterable = (obj(*a, **k) for (obj, (a, k)) in zipped)
+        else:
+            iterable = (obj(*args, **kwds) for obj in self._objs)
+
+        group = self.__class__(iterable)
         group._keys = self._keys
         return group
 
@@ -245,6 +252,19 @@ if __name__ == '__main__':
             result = group[:2]  # <- __getitem__()
             self.assertIsInstance(result, ProxyGroup)
             self.assertEqual(result._objs, ['ab', 'xy'])
+
+        def test_proxygroup_argument_handling(self):
+            # Unwrapping ProxyGroup args with __add__().
+            group_of_ints1 = ProxyGroup([50, 60])
+            group_of_ints2 = ProxyGroup([5, 10])
+            group = group_of_ints1 + group_of_ints2
+            self.assertEqual(group._objs, [55, 70])
+
+            # Unwrapping ProxyGroup args with __getitem__().
+            group_of_indexes = ProxyGroup([0, 1])
+            group_of_strings = ProxyGroup(['abc', 'abc'])
+            group = group_of_strings[group_of_indexes]
+            self.assertEqual(group._objs, ['a', 'b'])
 
 
     unittest.main()
