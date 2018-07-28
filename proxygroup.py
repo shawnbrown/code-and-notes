@@ -70,7 +70,7 @@ class ProxyGroup(ProxyGroupBase):
             self._keys = list(iterable.keys())
             self._objs = list(iterable.values())
         else:
-            self._keys = None
+            self._keys = list()
             self._objs = list(iterable)
 
     def __iter__(self):
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     class TestProxyGroup(unittest.TestCase):
         def test_init_sequence(self):
             group = ProxyGroup([1, 2, 3])
-            self.assertEqual(group._keys, None)
+            self.assertEqual(group._keys, [])
             self.assertEqual(group._objs, [1, 2, 3])
 
         def test_init_mapping(self):
