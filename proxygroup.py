@@ -114,7 +114,7 @@ class ProxyGroup(ProxyGroupBase):
             return objs
         return value._objs
 
-    def _expand_args(self, *args, **kwds):
+    def _expand_args_kwds(self, *args, **kwds):
         if not any(self._is_expandable(x) for x in chain(args, kwds.values())):
             return None  # <- EXIT!
 
@@ -136,7 +136,7 @@ class ProxyGroup(ProxyGroupBase):
         return list(zip(zipped_args, zipped_kwds))
 
     def __call__(self, *args, **kwds):
-        expanded = self._expand_args(*args, **kwds)
+        expanded = self._expand_args_kwds(*args, **kwds)
         if expanded:
             zipped = zip(self._objs, expanded)
             iterable = (obj(*a, **k) for (obj, (a, k)) in zipped)
@@ -287,28 +287,28 @@ if __name__ == '__main__':
                 msg='result order should match key names, not _obj position',
             )
 
-        def test_expand_arguments(self):
+        def test_expand_args_kwds(self):
             argsgroup = ProxyGroup([2, 4])
 
             kwdsgroup = ProxyGroup([2, 4])
             kwdsgroup._keys = ['foo', 'bar']
 
             # Argsgroup expansion.
-            result = argsgroup._expand_args(ProxyGroup([5, 6]))
+            result = argsgroup._expand_args_kwds(ProxyGroup([5, 6]))
             expected = [
                 ((5,), {}),
                 ((6,), {}),
             ]
             self.assertEqual(result, expected)
 
-            result = argsgroup._expand_args(1, ProxyGroup([5, 6]))
+            result = argsgroup._expand_args_kwds(1, ProxyGroup([5, 6]))
             expected = [
                 ((1, 5), {}),
                 ((1, 6), {}),
             ]
             self.assertEqual(result, expected)
 
-            result = argsgroup._expand_args(x=ProxyGroup([5, 6]), y=ProxyGroup([7, 9]))
+            result = argsgroup._expand_args_kwds(x=ProxyGroup([5, 6]), y=ProxyGroup([7, 9]))
             expected = [
                 ((), {'x': 5, 'y': 7}),
                 ((), {'x': 6, 'y': 9}),
@@ -319,7 +319,7 @@ if __name__ == '__main__':
             kwdgrp2 = ProxyGroup([5, 6])
             kwdgrp2._keys = ['foo', 'bar']
 
-            result = kwdsgroup._expand_args(kwdgrp2)
+            result = kwdsgroup._expand_args_kwds(kwdgrp2)
             expected = [
                 ((5,), {}),
                 ((6,), {}),
@@ -328,23 +328,23 @@ if __name__ == '__main__':
 
             kwdgrp_reverse = ProxyGroup([6, 5])
             kwdgrp_reverse._keys = ['bar', 'foo']
-            result = kwdsgroup._expand_args(kwdgrp_reverse)
+            result = kwdsgroup._expand_args_kwds(kwdgrp_reverse)
             expected = [
                 ((5,), {}),
                 ((6,), {}),
             ]
             self.assertEqual(result, expected)
 
-            result = kwdsgroup._expand_args(1, kwdgrp2)
+            result = kwdsgroup._expand_args_kwds(1, kwdgrp2)
             expected = [
                 ((1, 5), {}),
                 ((1, 6), {}),
             ]
             self.assertEqual(result, expected)
 
-            # Arguments and keywords (all cases).
-            result = kwdsgroup._expand_args('a', ProxyGroup({'foo': 'b', 'bar': 'c'}),
-                                            x=1, y=ProxyGroup({'bar': 4, 'foo': 2}))
+            # Sanity-check/quick integration test.
+            result = kwdsgroup._expand_args_kwds('a', ProxyGroup({'foo': 'b', 'bar': 'c'}),
+                                                 x=1, y=ProxyGroup({'bar': 4, 'foo': 2}))
             expected = [
                 (('a', 'b'), {'x': 1, 'y': 2}),
                 (('a', 'c'), {'x': 1, 'y': 4}),
