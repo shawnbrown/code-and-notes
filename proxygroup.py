@@ -67,11 +67,11 @@ class ProxyGroup(ProxyGroupBase):
             raise ValueError(msg)
 
         if isinstance(iterable, Mapping):
-            self._keys = list(iterable.keys())
-            self._objs = list(iterable.values())
+            self._keys = tuple(iterable.keys())
+            self._objs = tuple(iterable.values())
         else:
-            self._keys = list()
-            self._objs = list(iterable)
+            self._keys = tuple()
+            self._objs = tuple(iterable)
 
     def __iter__(self):
         if self._keys:
@@ -176,14 +176,14 @@ if __name__ == '__main__':
     class TestProxyGroup(unittest.TestCase):
         def test_init_sequence(self):
             group = ProxyGroup([1, 2, 3])
-            self.assertEqual(group._keys, [])
-            self.assertEqual(group._objs, [1, 2, 3])
+            self.assertEqual(group._keys, ())
+            self.assertEqual(group._objs, (1, 2, 3))
 
         def test_init_mapping(self):
             data = {'a': 1, 'b': 2, 'c': 3}
             group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
-            self.assertEqual(group._keys, list(data.keys()))
-            self.assertEqual(group._objs, list(data.values()))
+            self.assertEqual(group._keys, tuple(data.keys()))
+            self.assertEqual(group._objs, tuple(data.values()))
 
         def test_init_exceptions(self):
             with self.assertRaises(TypeError):
@@ -214,7 +214,7 @@ if __name__ == '__main__':
             group = ProxyGroup([ExampleClass(), ExampleClass()])
             group = group.attr
             self.assertIsInstance(group, ProxyGroup)
-            self.assertEqual(group._objs, [123, 123])
+            self.assertEqual(group._objs, (123, 123))
 
         def test_is_expandable(self):
             # Test ProxyGroup of list items.
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             result = group._expand_value(ProxyGroup([5, 6]))
             self.assertEqual(
                 result,
-                [5, 6],
+                (5, 6),
                 msg='compatible ProxyGroup objs are not expanded',
             )
 
@@ -355,38 +355,38 @@ if __name__ == '__main__':
             group = ProxyGroup(['foo', 'bar'])
             result = group.upper()
             self.assertIsInstance(result, ProxyGroup)
-            self.assertEqual(result._objs, ['FOO', 'BAR'])
+            self.assertEqual(result._objs, ('FOO', 'BAR'))
 
         def test__add__(self):
             group = ProxyGroup([1, 2])
             result = group + 100  # <- __add__()
             self.assertIsInstance(result, ProxyGroup)
-            self.assertEqual(result._objs, [101, 102])
+            self.assertEqual(result._objs, (101, 102))
 
         def test__radd__(self):
             group = ProxyGroup([1, 2])
             result = 100 + group  # <- __radd__()
             self.assertIsInstance(result, ProxyGroup)
-            self.assertEqual(result._objs, [101, 102])
+            self.assertEqual(result._objs, (101, 102))
 
         def test__getitem__(self):
             group = ProxyGroup(['abc', 'xyz'])
             result = group[:2]  # <- __getitem__()
             self.assertIsInstance(result, ProxyGroup)
-            self.assertEqual(result._objs, ['ab', 'xy'])
+            self.assertEqual(result._objs, ('ab', 'xy'))
 
         def test_proxygroup_argument_handling(self):
             # Unwrapping ProxyGroup args with __add__().
             group_of_ints1 = ProxyGroup([50, 60])
             group_of_ints2 = ProxyGroup([5, 10])
             group = group_of_ints1 + group_of_ints2
-            self.assertEqual(group._objs, [55, 70])
+            self.assertEqual(group._objs, (55, 70))
 
             # Unwrapping ProxyGroup args with __getitem__().
             group_of_indexes = ProxyGroup([0, 1])
             group_of_strings = ProxyGroup(['abc', 'abc'])
             group = group_of_strings[group_of_indexes]
-            self.assertEqual(group._objs, ['a', 'b'])
+            self.assertEqual(group._objs, ('a', 'b'))
 
     class TestProxyGroupBaseMethods(unittest.TestCase):
         def test__eq__(self):
