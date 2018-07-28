@@ -95,19 +95,20 @@ class ProxyGroup(ProxyGroupBase):
         group._keys = self._keys
         return group
 
+    def _is_expandable(self, arg):
+        if not isinstance(arg, ProxyGroup):
+            return False
+        if len(arg._objs) != len(self._objs):
+            return False
+        if set(arg._keys) != set(self._keys):
+            return False
+        return True
+
     def _expand_args(self, *args, **kwds):
         objs_len = len(self._objs)
         keys_set = set(self._keys)
 
-        def is_expandable(arg):
-            if not isinstance(arg, ProxyGroup):
-                return False
-            if len(arg._objs) != objs_len:
-                return False
-            if set(arg._keys) != keys_set:
-                return False
-            return True
-
+        is_expandable = self._is_expandable
         if not any(is_expandable(x) for x in chain(args, kwds.values())):
             return None  # <- EXIT!
 
@@ -217,30 +218,42 @@ if __name__ == '__main__':
             self.assertIsInstance(group, ProxyGroup)
             self.assertEqual(group._objs, [123, 123])
 
+        def test_is_expandable(self):
+            # Test ProxyGroup of list items.
+            group = ProxyGroup([2, 4])
+            self.assertTrue(
+                group._is_expandable(ProxyGroup([5, 6])),
+                msg='is ProxyGroup and _objs length matches',
+            )
+            self.assertFalse(
+                group._is_expandable(1),
+                msg='non-ProxyGroup values are always non-expandable',
+            )
+            self.assertFalse(
+                group._is_expandable(ProxyGroup([5, 6, 7])),
+                msg='not expandable when _objs length does not match',
+            )
+            self.assertFalse(
+                group._is_expandable(ProxyGroup({'foo': 5, 'bar': 6})),
+                msg='not expandable if keys are given but original has no keys',
+            )
+
+            # Test ProxyGroup of dict items.
+            group = ProxyGroup({'foo': 2, 'bar': 4})
+            self.assertTrue(
+                group._is_expandable(ProxyGroup({'foo': 5, 'bar': 6})),
+                msg='is ProxyGroup and _keys match',
+            )
+            self.assertFalse(
+                group._is_expandable(ProxyGroup({'qux': 5, 'quux': 6})),
+                msg='not expandable if keys do not match',
+            )
+
         def test_expand_arguments(self):
             argsgroup = ProxyGroup([2, 4])
 
             kwdsgroup = ProxyGroup([2, 4])
             kwdsgroup._keys = ['foo', 'bar']
-
-            # Nothing to expand.
-            result = argsgroup._expand_args(1, 2)
-            self.assertIsNone(result, msg='if no args to expand, returns None')
-
-            result = kwdsgroup._expand_args(1, x=2)
-            self.assertIsNone(result, msg='if no args or kwds to expand, return None')
-
-            result = argsgroup._expand_args(ProxyGroup([1, 2, 3]))
-            self.assertIsNone(result, msg='if args length is different, return None')
-
-            result = argsgroup._expand_args(kwdsgroup)
-            self.assertIsNone(result, msg='if expects args but only get kwds, return None')
-
-            result = kwdsgroup._expand_args(argsgroup)
-            self.assertIsNone(result, msg='if expects kwds but only get args, return None')
-
-            result = kwdsgroup._expand_args(ProxyGroup({'qux': 5, 'quux': 6}))
-            self.assertIsNone(result, msg='if kwds do not match, return None')
 
             # Argsgroup expansion.
             result = argsgroup._expand_args(ProxyGroup([5, 6]))
