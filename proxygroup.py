@@ -96,37 +96,43 @@ class ProxyGroup(ProxyGroupBase):
         return group
 
     def _expand_args(self, *args, **kwds):
-        arg_values = chain(args, kwds.values())
-        if not any(isinstance(x, ProxyGroup) for x in arg_values):
-            return None
+        objs_len = len(self._objs)
+        keys_set = set(self._keys)
 
-        len_objs = len(self._objs)
+        def is_expandable(arg):
+            if not isinstance(arg, ProxyGroup):
+                return False
+            if len(arg._objs) != objs_len:
+                return False
+            if set(arg._keys) != keys_set:
+                return False
+            return True
 
-        is_expandable = \
-            lambda x: isinstance(x, ProxyGroup) and len(x._objs) == len_objs
+        if not any(is_expandable(x) for x in chain(args, kwds.values())):
+            return None  # <- EXIT!
+
+        def expand_arg(arg):
+            if not is_expandable(arg):
+                return [arg] * objs_len
+
+            if arg._keys:
+                order = (self._keys.index(x) for x in arg._keys)
+                _, objs = zip(*sorted(zip(order, arg._objs)))
+                return objs
+            return arg._objs
 
         if args:
-            def expand_arg(arg):
-                if is_expandable(arg):
-                    return arg._objs
-                return [arg] * len_objs
-
-            expanded_args = [expand_arg(arg) for arg in args]
-            zipped_args = list(zip(*expanded_args))
+            expanded_args = (expand_arg(arg) for arg in args)
+            zipped_args = zip(*expanded_args)
         else:
-            zipped_args = [tuple()] * len_objs
+            zipped_args = [()] * objs_len
 
         if kwds:
-            def expand_kwd(key, value):
-                if is_expandable(value):
-                    return key, value._objs
-                return key, [value] * len_objs
-
-            expanded_kwds = dict(expand_kwd(k, v) for k, v in kwds.items())
-            expanded_values = list(zip(*expanded_kwds.values()))
-            zipped_kwds = [dict(zip(kwds.keys(), x)) for x in expanded_values]
+            expanded_values = (expand_arg(v) for v in kwds.values())
+            zipped_values = zip(*expanded_values)
+            zipped_kwds = (dict(zip(kwds.keys(), x)) for x in zipped_values)
         else:
-            zipped_kwds = [{}] * len_objs
+            zipped_kwds = [{}] * objs_len
 
         return list(zip(zipped_args, zipped_kwds))
 
@@ -212,50 +218,85 @@ if __name__ == '__main__':
             self.assertEqual(group._objs, [123, 123])
 
         def test_expand_arguments(self):
-            group = ProxyGroup([5, 10])
+            argsgroup = ProxyGroup([2, 4])
 
-            # Arguments.
-            result = group._expand_args(1, 2)
+            kwdsgroup = ProxyGroup([2, 4])
+            kwdsgroup._keys = ['foo', 'bar']
+
+            # Nothing to expand.
+            result = argsgroup._expand_args(1, 2)
             self.assertIsNone(result, msg='if no args to expand, returns None')
 
-            result = group._expand_args(ProxyGroup([2, 4]))
+            result = kwdsgroup._expand_args(1, x=2)
+            self.assertIsNone(result, msg='if no args or kwds to expand, return None')
+
+            result = argsgroup._expand_args(ProxyGroup([1, 2, 3]))
+            self.assertIsNone(result, msg='if args length is different, return None')
+
+            result = argsgroup._expand_args(kwdsgroup)
+            self.assertIsNone(result, msg='if expects args but only get kwds, return None')
+
+            result = kwdsgroup._expand_args(argsgroup)
+            self.assertIsNone(result, msg='if expects kwds but only get args, return None')
+
+            result = kwdsgroup._expand_args(ProxyGroup({'qux': 5, 'quux': 6}))
+            self.assertIsNone(result, msg='if kwds do not match, return None')
+
+            # Argsgroup expansion.
+            result = argsgroup._expand_args(ProxyGroup([5, 6]))
             expected = [
-                ((2,), {}),
-                ((4,), {}),
+                ((5,), {}),
+                ((6,), {}),
             ]
             self.assertEqual(result, expected)
 
-            result = group._expand_args(1, ProxyGroup([2, 4]))
+            result = argsgroup._expand_args(1, ProxyGroup([5, 6]))
             expected = [
-                ((1, 2), {}),
-                ((1, 4), {}),
+                ((1, 5), {}),
+                ((1, 6), {}),
             ]
             self.assertEqual(result, expected)
 
-            # Keywords.
-            result = group._expand_args(foo=1, bar=2)
-            self.assertIsNone(result, msg='if no args or kwds to expand, returns None')
-
-            result = group._expand_args(foo=ProxyGroup([2, 4]))
+            result = argsgroup._expand_args(x=ProxyGroup([5, 6]), y=ProxyGroup([7, 9]))
             expected = [
-                (tuple(), {'foo': 2}),
-                (tuple(), {'foo': 4}),
+                (tuple(), {'x': 5, 'y': 7}),
+                (tuple(), {'x': 6, 'y': 9}),
             ]
             self.assertEqual(result, expected)
 
-            result = group._expand_args(foo=1, bar=ProxyGroup([2, 4]))
+            # Kwdsgroup expansion.
+            kwdgrp2 = ProxyGroup([5, 6])
+            kwdgrp2._keys = ['foo', 'bar']
+
+            result = kwdsgroup._expand_args(kwdgrp2)
             expected = [
-                (tuple(), {'foo': 1, 'bar': 2}),
-                (tuple(), {'foo': 1, 'bar': 4}),
+                ((5,), {}),
+                ((6,), {}),
+            ]
+            self.assertEqual(result, expected)
+
+            kwdgrp_reverse = ProxyGroup([6, 5])
+            kwdgrp_reverse._keys = ['bar', 'foo']
+            result = kwdsgroup._expand_args(kwdgrp_reverse)
+            expected = [
+                ((5,), {}),
+                ((6,), {}),
+            ]
+            self.assertEqual(result, expected)
+
+            result = kwdsgroup._expand_args(1, kwdgrp2)
+            expected = [
+                ((1, 5), {}),
+                ((1, 6), {}),
             ]
             self.assertEqual(result, expected)
 
             # Arguments and keywords (all cases).
-            result = group._expand_args('x', ProxyGroup(['y', 'z']),
-                                        foo=1, bar=ProxyGroup([2, 4]))
+            result = kwdsgroup._expand_args('a', ProxyGroup({'foo': 'b', 'bar': 'c'}),
+                                            x=1, y=ProxyGroup({'bar': 4, 'foo': 2}))
             expected = [
-                (('x', 'y'), {'foo': 1, 'bar': 2}),
-                (('x', 'z'), {'foo': 1, 'bar': 4}),
+                (('a', 'b'), {'x': 1, 'y': 2}),
+                (('a', 'c'), {'x': 1, 'y': 4}),
             ]
             self.assertEqual(result, expected)
 
