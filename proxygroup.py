@@ -104,32 +104,30 @@ class ProxyGroup(ProxyGroupBase):
             return False
         return True
 
-    def _expand_args(self, *args, **kwds):
-        objs_len = len(self._objs)
-        keys_set = set(self._keys)
+    def _expand_value(self, value):
+        if not self._is_expandable(value):
+            return (value,) * len(self._objs)
 
-        is_expandable = self._is_expandable
-        if not any(is_expandable(x) for x in chain(args, kwds.values())):
+        if value._keys:
+            key_order = (self._keys.index(x) for x in value._keys)
+            _, objs = zip(*sorted(zip(key_order, value._objs)))
+            return objs
+        return value._objs
+
+    def _expand_args(self, *args, **kwds):
+        if not any(self._is_expandable(x) for x in chain(args, kwds.values())):
             return None  # <- EXIT!
 
-        def expand_arg(arg):
-            if not is_expandable(arg):
-                return [arg] * objs_len
-
-            if arg._keys:
-                order = (self._keys.index(x) for x in arg._keys)
-                _, objs = zip(*sorted(zip(order, arg._objs)))
-                return objs
-            return arg._objs
+        objs_len = len(self._objs)
 
         if args:
-            expanded_args = (expand_arg(arg) for arg in args)
+            expanded_args = (self._expand_value(arg) for arg in args)
             zipped_args = zip(*expanded_args)
         else:
             zipped_args = [()] * objs_len
 
         if kwds:
-            expanded_values = (expand_arg(v) for v in kwds.values())
+            expanded_values = (self._expand_value(v) for v in kwds.values())
             zipped_values = zip(*expanded_values)
             zipped_kwds = (dict(zip(kwds.keys(), x)) for x in zipped_values)
         else:
@@ -249,6 +247,46 @@ if __name__ == '__main__':
                 msg='not expandable if keys do not match',
             )
 
+        def test_expand_value(self):
+            group = ProxyGroup([2, 4])
+
+            result = group._expand_value(5)
+            self.assertEqual(
+                result,
+                (5, 5),
+                msg='expanded to match number of _objs',
+            )
+
+            result = group._expand_value(ProxyGroup([5, 6]))
+            self.assertEqual(
+                result,
+                [5, 6],
+                msg='compatible ProxyGroup objs are not expanded',
+            )
+
+            other = ProxyGroup([5, 6, 7])
+            result = group._expand_value(other)
+            self.assertIsInstance(
+                result,
+                tuple,
+                msg='incompatible ProxyGroups are expanded',
+            )
+            self.assertEqual(len(result), 2)
+            equals_other = super(other.__class__, other).__eq__
+            self.assertTrue(equals_other(result[0]))
+            self.assertTrue(equals_other(result[1]))
+
+            group = ProxyGroup([2, 4])
+            group._keys = ['foo', 'bar']
+            other = ProxyGroup([8, 6])
+            other._keys = ['bar', 'foo']  # <- keys in different order
+            result = group._expand_value(other)
+            self.assertEqual(
+                result,
+                (6, 8),  # <- reordered to match `group`
+                msg='result order should match key names, not _obj position',
+            )
+
         def test_expand_arguments(self):
             argsgroup = ProxyGroup([2, 4])
 
@@ -272,8 +310,8 @@ if __name__ == '__main__':
 
             result = argsgroup._expand_args(x=ProxyGroup([5, 6]), y=ProxyGroup([7, 9]))
             expected = [
-                (tuple(), {'x': 5, 'y': 7}),
-                (tuple(), {'x': 6, 'y': 9}),
+                ((), {'x': 5, 'y': 7}),
+                ((), {'x': 6, 'y': 9}),
             ]
             self.assertEqual(result, expected)
 
