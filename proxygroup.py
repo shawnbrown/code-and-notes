@@ -166,6 +166,11 @@ _define_special_attribute_proxies(ProxyGroup)
 if __name__ == '__main__':
     import unittest
 
+    try:
+        import pandas
+    except ImportError:
+        pandas = None
+
 
     class TestProxyGroup(unittest.TestCase):
         def test_init_sequence(self):
@@ -413,6 +418,47 @@ if __name__ == '__main__':
 
             result = super(ProxyGroup, self.group1).__ne__(self.group1)
             self.assertIs(result, False)
+
+
+    @unittest.skipIf(not pandas, 'pandas not found')
+    class TestPandasExample(unittest.TestCase):
+        """Quick integration test using a ProxyGroup of DataFrames."""
+
+        def setUp(self):
+            data = pandas.DataFrame({
+                'A': ('x', 'x', 'y', 'y', 'z', 'z'),
+                'B': ('foo', 'foo', 'foo', 'bar', 'bar', 'bar'),
+                'C': (20, 30, 10, 20, 10, 10),
+            })
+            self.group = ProxyGroup([data, data])
+
+        def test_summed_values(self):
+            result = self.group['C'].sum()
+            self.assertEqual(tuple(result), (100, 100))
+
+        def test_selected_grouped_summed_values(self):
+            result = self.group[['A', 'C']].groupby('A').sum()
+
+            expected = pandas.DataFrame(
+                data={'C': (50, 30, 20)},
+                index=pandas.Index(['x', 'y', 'z'], name='A'),
+            )
+
+            df1, df2 = result  # Unpack results.
+            pandas.testing.assert_frame_equal(df1, expected)
+            pandas.testing.assert_frame_equal(df2, expected)
+
+        def test_selected_filtered_grouped_summed_values(self):
+            result = self.group[['A', 'C']][self.group['B'] == 'foo'].groupby('A').sum()
+
+            expected = pandas.DataFrame(
+                data={'C': (50, 10)},
+                index=pandas.Index(['x', 'y'], name='A'),
+            )
+
+            df1, df2 = result  # Unpack results.
+            pandas.testing.assert_frame_equal(df1, expected)
+            pandas.testing.assert_frame_equal(df2, expected)
 
 
     unittest.main()
