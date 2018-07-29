@@ -80,15 +80,35 @@ class ProxyGroup(ProxyGroupBase):
 
     def __repr__(self):
         cls_name = self.__class__.__name__
+
         if self._keys:
             zipped = zip(self._keys, self._objs)
-            obj_reprs = ('{0!r}: {1!r}'.format(k, v) for k, v in zipped)
-            obj_reprs = '{{{0}}}'.format(', '.join(obj_reprs))
+            obj_reprs = ['{0!r}: {1!r}'.format(k, v) for k, v in zipped]
+            indent_str = '    '
+            begin, end = '{', '}'
         else:
-            obj_reprs = (repr(x) for x in self._objs)
-            obj_reprs = '[{0}]'.format(', '.join(obj_reprs))
+            obj_reprs = [repr(x) for x in self._objs]
+            indent_str = '  '
+            begin, end = '[', ']'
 
-        return '{0}({1})'.format(cls_name, obj_reprs)
+        # Get length of _objs reprs and separator characters.
+        separator_len = (len(obj_reprs) - 1) * len(', ')
+        internal_repr_len = sum(len(x) for x in obj_reprs) + separator_len
+
+        # Determine internal repr limit for single-line reprs.
+        outer_repr_length = len(cls_name) + len('([])')
+        max_repr_width = 79
+        internal_repr_limit = max_repr_width - outer_repr_length
+
+        # Build internal repr string.
+        if internal_repr_len > internal_repr_limit:
+            indent = '\n' + indent_str
+            indented_objs = [indent.join(x.splitlines()) for x in obj_reprs]
+            internal_repr = '\n  {0}\n'.format(',\n  '.join(indented_objs))
+        else:
+            internal_repr = ', '.join(obj_reprs)
+
+        return '{0}({1}{2}{3})'.format(cls_name, begin, internal_repr, end)
 
     def __getattr__(self, name):
         group = self.__class__(getattr(obj, name) for obj in self._objs)
@@ -203,8 +223,27 @@ if __name__ == '__main__':
             group = ProxyGroup([1, 2, 3])
             self.assertEqual(repr(group), 'ProxyGroup([1, 2, 3])')
 
-            group = ProxyGroup({'a': 1})
-            self.assertEqual(repr(group), "ProxyGroup({'a': 1})")
+            group = ProxyGroup([1, 2])
+            group._keys = ['a', 'b']
+            self.assertEqual(repr(group), "ProxyGroup({'a': 1, 'b': 2})")
+
+            # Exactly up-to single-line limit.
+            value = 'a' * 63
+            group = ProxyGroup(['a' * 63])
+            self.assertEqual(len(repr(group)), 79)
+            self.assertEqual(
+                repr(group),
+                "ProxyGroup(['{0}'])".format(value),
+            )
+
+            # Multi-line repr (one char over single-line limit)
+            value = 'a' * 64
+            group = ProxyGroup(['a' * 64])
+            self.assertEqual(len(repr(group)), 84)
+            self.assertEqual(
+                repr(group),
+                "ProxyGroup([\n  '{0}'\n])".format(value),
+            )
 
         def test_getattr(self):
             class ExampleClass(object):
