@@ -17,8 +17,8 @@ except ImportError:
 
 
 class ProxyGroupBase(Iterable):
-    """A base class to provide magic methods that operate directly
-    on a ProxyGroup itself (rather than on the objects it contains).
+    """A base class to provide magic methods that operate directly on
+    the ProxyGroup itself---rather than on the objects it contains.
 
     These methods must be accessed using super()::
 
@@ -28,12 +28,12 @@ class ProxyGroupBase(Iterable):
         True
     """
     def __eq__(self, other):
-        return (isinstance(other, ProxyGroupBase)
-                and self._objs == getattr(other, '_objs', None)
-                and self._keys == getattr(other, '_keys', None))
+        return (isinstance(other, ProxyGroup)
+                and self._objs == other._objs
+                and self._keys == other._keys)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not super(ProxyGroup, self).__eq__(other)
 
 
 class ProxyGroup(ProxyGroupBase):
@@ -382,18 +382,37 @@ if __name__ == '__main__':
             group = group_of_strings[group_of_indexes]
             self.assertEqual(group._objs, ('a', 'b'))
 
+
     class TestProxyGroupBaseMethods(unittest.TestCase):
+        def setUp(self):
+            self.group1 = ProxyGroup(['foo', 'bar'])
+            self.group2 = ProxyGroup(['foo', 'baz'])
+
         def test__eq__(self):
-            group1 = ProxyGroup(['foo', 'bar'])
-            group2 = ProxyGroup(['foo', 'bar'])
+            # Comparing contents of ProxyGroup (default behavior).
+            result = (self.group1 == self.group2)  # <- Call to __eq__().
+            self.assertIsInstance(result, ProxyGroup)
+            self.assertEqual(tuple(result), (True, False))
 
-            result = group1.__eq__(group2)
-            self.assertIsInstance(result, ProxyGroup,
-                                  msg='comparison runs on ProxyGroup contents')
+            # Comparing ProxyGroup objects themselves.
+            result = super(ProxyGroup, self.group1).__eq__(self.group1)
+            self.assertIs(result, True)
 
-            result = super(ProxyGroup, group1).__eq__(group2)
-            self.assertIs(
-                result, True, msg='comparison runs on ProxyGroup itself')
+            result = super(ProxyGroup, self.group1).__eq__(self.group2)
+            self.assertIs(result, False)
+
+        def test__ne__(self):
+            # Comparing contents of ProxyGroup (default behavior).
+            result = (self.group1 != self.group2)  # <- Call to __ne__().
+            self.assertIsInstance(result, ProxyGroup)
+            self.assertEqual(tuple(result), (False, True))
+
+            # Comparing ProxyGroup objects themselves.
+            result = super(ProxyGroup, self.group1).__ne__(self.group2)
+            self.assertIs(result, True)
+
+            result = super(ProxyGroup, self.group1).__ne__(self.group1)
+            self.assertIs(result, False)
 
 
     unittest.main()
