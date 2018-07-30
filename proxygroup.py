@@ -298,15 +298,15 @@ if __name__ == '__main__':
             )
             self.assertFalse(
                 group._compatible_group(1),
-                msg='non-ProxyGroup values are always non-expandable',
+                msg='non-ProxyGroup values are never compatible',
             )
             self.assertFalse(
                 group._compatible_group(ProxyGroup([5, 6, 7])),
-                msg='not expandable when _objs length does not match',
+                msg='not compatible when _objs length does not match',
             )
             self.assertFalse(
                 group._compatible_group(ProxyGroup({'foo': 5, 'bar': 6})),
-                msg='not expandable if keys are given but original has no keys',
+                msg='not compatible if keys are given but original has no keys',
             )
 
             # Test ProxyGroup of dict items.
@@ -317,7 +317,7 @@ if __name__ == '__main__':
             )
             self.assertFalse(
                 group._compatible_group(ProxyGroup({'qux': 5, 'quux': 6})),
-                msg='not expandable if keys do not match',
+                msg='not compatible if keys do not match',
             )
 
         def test_normalize_value(self):
@@ -327,14 +327,14 @@ if __name__ == '__main__':
             self.assertEqual(
                 result,
                 (5, 5),
-                msg='expanded to match number of _objs',
+                msg='value is expanded to match number of _objs',
             )
 
             result = group._normalize_value(ProxyGroup([5, 6]))
             self.assertEqual(
                 result,
                 (5, 6),
-                msg='compatible ProxyGroup objs are not expanded',
+                msg='compatible ProxyGroups are unwrapped rather than expanded',
             )
 
             other = ProxyGroup([5, 6, 7])
@@ -342,7 +342,7 @@ if __name__ == '__main__':
             self.assertIsInstance(
                 result,
                 tuple,
-                msg='incompatible ProxyGroups are expanded',
+                msg='incompatible ProxyGroups are expanded like other values',
             )
             self.assertEqual(len(result), 2)
             equals_other = super(other.__class__, other).__eq__
@@ -366,7 +366,7 @@ if __name__ == '__main__':
             kwdsgroup = ProxyGroup([2, 4])
             kwdsgroup._keys = ['foo', 'bar']
 
-            # Argsgroup expansion.
+            # Unwrap ProxyGroup.
             result = argsgroup._expand_args_kwds(ProxyGroup([5, 6]))
             expected = [
                 ((5,), {}),
@@ -374,6 +374,7 @@ if __name__ == '__main__':
             ]
             self.assertEqual(result, expected)
 
+            # Expand int and unwrap ProxyGroup.
             result = argsgroup._expand_args_kwds(1, ProxyGroup([5, 6]))
             expected = [
                 ((1, 5), {}),
@@ -381,6 +382,7 @@ if __name__ == '__main__':
             ]
             self.assertEqual(result, expected)
 
+            # Unwrap two ProxyGroups.
             result = argsgroup._expand_args_kwds(x=ProxyGroup([5, 6]), y=ProxyGroup([7, 9]))
             expected = [
                 ((), {'x': 5, 'y': 7}),
@@ -392,6 +394,7 @@ if __name__ == '__main__':
             kwdgrp2 = ProxyGroup([5, 6])
             kwdgrp2._keys = ['foo', 'bar']
 
+            # Unwrap keyed ProxyGroup.
             result = kwdsgroup._expand_args_kwds(kwdgrp2)
             expected = [
                 ((5,), {}),
@@ -399,6 +402,7 @@ if __name__ == '__main__':
             ]
             self.assertEqual(result, expected)
 
+            # Unwrap keyed ProxyGroup with keys in different order.
             kwdgrp_reverse = ProxyGroup([6, 5])
             kwdgrp_reverse._keys = ['bar', 'foo']
             result = kwdsgroup._expand_args_kwds(kwdgrp_reverse)
@@ -408,6 +412,7 @@ if __name__ == '__main__':
             ]
             self.assertEqual(result, expected)
 
+            # Expand int and unwrap keyed ProxyGroup.
             result = kwdsgroup._expand_args_kwds(1, kwdgrp2)
             expected = [
                 ((1, 5), {}),
@@ -415,7 +420,7 @@ if __name__ == '__main__':
             ]
             self.assertEqual(result, expected)
 
-            # Sanity-check/quick integration test.
+            # Sanity-check/quick integration test (all combinations).
             result = kwdsgroup._expand_args_kwds('a', ProxyGroup({'foo': 'b', 'bar': 'c'}),
                                                  x=1, y=ProxyGroup({'bar': 4, 'foo': 2}))
             expected = [
