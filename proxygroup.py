@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
             # Exactly up-to single-line limit.
             value = 'a' * 63
-            group = ProxyGroup(['a' * 63])
+            group = ProxyGroup([value])
             self.assertEqual(len(repr(group)), 79)
             self.assertEqual(
                 repr(group),
@@ -273,7 +273,7 @@ if __name__ == '__main__':
 
             # Multi-line repr (one char over single-line limit)
             value = 'a' * 64
-            group = ProxyGroup(['a' * 64])
+            group = ProxyGroup([value])
             self.assertEqual(len(repr(group)), 84)
             self.assertEqual(
                 repr(group),
