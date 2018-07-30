@@ -197,7 +197,14 @@ class ProxyGroup(ProxyGroupBase):
         return group
 
 
-def _define_special_attribute_proxies(proxy_class):
+def _setup_ProxyGroup_special_names(proxy_class):
+    """This function is run when the module is imported--users
+    should not call this function directly. It assigns magic
+    methods and special attribute names to the ProxyGroup class.
+
+    This behavior is wrapped in a function to help keep the
+    module-level namespace clean.
+    """
     special_attributes = """
         add sub mul mod truediv floordiv div
         radd rsub rmul rmod rtruediv rfloordiv rdiv
@@ -215,5 +222,5 @@ def _define_special_attribute_proxies(proxy_class):
         method = partial(proxy_getattr, name=dunder)
         setattr(proxy_class, dunder, property(method))
 
-_define_special_attribute_proxies(ProxyGroup)
+_setup_ProxyGroup_special_names(ProxyGroup)
 
