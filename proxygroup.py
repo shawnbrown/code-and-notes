@@ -116,6 +116,9 @@ class ProxyGroup(ProxyGroupBase):
         return group
 
     def _compatible_group(self, value):
+        """Returns True if *value* is a ProxyGroup with compatible
+        contents.
+        """
         if not isinstance(value, ProxyGroup):
             return False
         if len(value._objs) != len(self._objs):
@@ -125,6 +128,23 @@ class ProxyGroup(ProxyGroupBase):
         return True
 
     def _normalize_value(self, value):
+        """Return a tuple of objects equal the number of objects
+        contained in the ProxyGroup.
+
+        If *value* itself is a compatible ProxyGroup, its contents will
+        be returned::
+
+            >>> group = ProxyGroup([2, 4])
+            >>> group._normalize_value(ProxyGroup([5, 6]))
+            (5, 6)
+
+        If *value* is not a compatible ProxyGroup, the iterable will
+        contain multiple copies of the same *value*::
+
+            >>> group = ProxyGroup([2, 4])
+            >>> group._normalize_value(9)
+            (9, 9)
+        """
         if self._compatible_group(value):
             if value._keys:
                 key_order = (self._keys.index(x) for x in value._keys)
@@ -134,6 +154,19 @@ class ProxyGroup(ProxyGroupBase):
         return (value,) * len(self._objs)  # <- Expand single value.
 
     def _expand_args_kwds(self, *args, **kwds):
+        """Return an expanded list of *args* and *kwds* to use when
+        calling objects contained in the ProxyGroup.
+
+        When a compatible ProxyGroup is passed as an argument, its
+        contents are unwrapped and paired with each record. When a
+        non-compatible value is passed as an argument, it is duplicated
+        for each record::
+
+            >>> group = ProxyGroup([2, 4])
+            >>> group._expand_args_kwds(ProxyGroup([5, 6]), 9, a=12)
+            [((5, 9), {'a': 12}),
+             ((6, 9), {'a': 12})]
+        """
         objs_len = len(self._objs)
 
         normalized_args = (self._normalize_value(arg) for arg in args)
@@ -151,10 +184,12 @@ class ProxyGroup(ProxyGroupBase):
 
     def __call__(self, *args, **kwds):
         if any(self._compatible_group(x) for x in chain(args, kwds.values())):
-            expanded = self._expand_args_kwds(*args, **kwds)
-            zipped = zip(self._objs, expanded)
+            # Call each object using args and kwds from the expanded list.
+            expanded_list = self._expand_args_kwds(*args, **kwds)
+            zipped = zip(self._objs, expanded_list)
             iterable = (obj(*a, **k) for (obj, (a, k)) in zipped)
         else:
+            # Call each object with the same args and kwds.
             iterable = (obj(*args, **kwds) for obj in self._objs)
 
         group = self.__class__(iterable)
