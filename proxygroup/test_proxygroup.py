@@ -299,6 +299,25 @@ class TestProxyGroupBaseMethods(unittest.TestCase):
         self.assertIs(result, False)
 
 
+class TestNestedExample(unittest.TestCase):
+    """Quick integration test using nested ProxyGroups."""
+
+    def setUp(self):
+        subgroup = ProxyGroup(['abc', 'def'])
+        subgroup._keys = ('foo', 'bar')
+        self.group = ProxyGroup([subgroup, 'ghi'])
+
+    def test_method(self):
+        result1, result2 = self.group.upper()
+        self.assertEqual(dict(result1), {'foo': 'ABC', 'bar': 'DEF'})
+        self.assertEqual(result2, 'GHI')
+
+    def test_magic_method(self):
+        result1, result2 = self.group + 'XYZ'
+        self.assertEqual(dict(result1), {'foo': 'abcXYZ', 'bar': 'defXYZ'})
+        self.assertEqual(result2, 'ghiXYZ')
+
+
 @unittest.skipIf(not pandas, 'pandas not found')
 class TestPandasExample(unittest.TestCase):
     """Quick integration test using a ProxyGroup of DataFrames."""
