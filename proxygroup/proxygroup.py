@@ -4,6 +4,13 @@ from functools import partial
 from itertools import chain
 
 try:
+    from collections.abc import Iterable
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Iterable
+    from collections import Mapping
+
+try:
     from functools import partialmethod  # New in version 3.4.
 except ImportError:
     # Adapted from the Python 3.6 Standard Library.
@@ -64,13 +71,6 @@ except ImportError:
         @property
         def __isabstractmethod__(self):
             return getattr(self.func, "__isabstractmethod__", False)
-
-try:
-    from collections.abc import Iterable
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Iterable
-    from collections import Mapping
 
 
 class ProxyGroupBase(Iterable):
