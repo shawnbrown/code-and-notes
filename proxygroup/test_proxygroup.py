@@ -213,29 +213,45 @@ class TestProxyGroup(unittest.TestCase):
         ]
         self.assertEqual(result, expected)
 
-    def test_call(self):
+    def test__getattr__(self):
+        number = complex(2, 3)
+        group = ProxyGroup([number, number])
+        group = group.imag  # <- Gets `imag` attribute.
+        self.assertEqual(group._objs, (3, 3))
+
+    def test__call__(self):
         group = ProxyGroup(['foo', 'bar'])
         result = group.upper()
         self.assertIsInstance(result, ProxyGroup)
         self.assertEqual(result._objs, ('FOO', 'BAR'))
 
-    def test__add__(self):
-        group = ProxyGroup([1, 2])
-        result = group + 100  # <- __add__()
-        self.assertIsInstance(result, ProxyGroup)
-        self.assertEqual(result._objs, (101, 102))
+    def test_added_special_names(self):
+        """Test some of the methods that are programmatically added to
+        ProxyGroup by the _setup_ProxyGroup_special_names() function.
+        """
+        group = ProxyGroup(['abc', 'def'])
 
-    def test__radd__(self):
-        group = ProxyGroup([1, 2])
-        result = 100 + group  # <- __radd__()
+        result = group + 'xxx'  # <- __add__()
         self.assertIsInstance(result, ProxyGroup)
-        self.assertEqual(result._objs, (101, 102))
+        self.assertEqual(result._objs, ('abcxxx', 'defxxx'))
 
-    def test__getitem__(self):
-        group = ProxyGroup(['abc', 'xyz'])
         result = group[:2]  # <- __getitem__()
         self.assertIsInstance(result, ProxyGroup)
-        self.assertEqual(result._objs, ('ab', 'xy'))
+        self.assertEqual(result._objs, ('ab', 'de'))
+
+    def test_added_reflected_special_names(self):
+        result = 100 + ProxyGroup([1, 2])  # <- __radd__()
+        self.assertIsInstance(result, ProxyGroup)
+        self.assertEqual(result._objs, (101, 102))
+
+        # When the reflected method is missing, the unreflected method of
+        # the *other* value is re-called on the ProxyGroup's contents. The
+        # following test case does this with strings. Since 'str' does not
+        # have an __radd__() method, this calls the unreflected __add__()
+        # of the original string.
+        result = 'xxx' + ProxyGroup(['abc', 'def'])  # <- unreflected __add__()
+        self.assertIsInstance(result, ProxyGroup)
+        self.assertEqual(result._objs, ('xxxabc', 'xxxdef'))
 
     def test_proxygroup_argument_handling(self):
         # Unwrapping ProxyGroup args with __add__().
