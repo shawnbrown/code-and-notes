@@ -317,6 +317,11 @@ class TestNestedExample(unittest.TestCase):
         self.assertEqual(dict(result1), {'foo': 'abcXYZ', 'bar': 'defXYZ'})
         self.assertEqual(result2, 'ghiXYZ')
 
+    def test_unreflected_magic_method(self):
+        result1, result2 = 'XYZ' + self.group
+        self.assertEqual(dict(result1), {'foo': 'XYZabc', 'bar': 'XYZdef'})
+        self.assertEqual(result2, 'XYZghi')
+
 
 @unittest.skipIf(not pandas, 'pandas not found')
 class TestPandasExample(unittest.TestCase):

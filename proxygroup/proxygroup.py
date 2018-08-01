@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import operator
 from functools import partial
 from itertools import chain
 
@@ -290,8 +291,8 @@ def _setup_ProxyGroup_special_names(proxy_class):
             group = self.__class__(meth(other) for meth in methods)
         except AttributeError:
             unreflected_name = name.replace('r', '', 1)  # Remove first 'r'.
-            method = getattr(other, unreflected_name)
-            group = self.__class__(method(obj) for obj in self._objs)
+            operation = getattr(operator, unreflected_name)
+            group = self.__class__(operation(other, obj) for obj in self._objs)
         group._keys = self._keys
         return group
 
