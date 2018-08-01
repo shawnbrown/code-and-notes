@@ -263,9 +263,10 @@ def _setup_ProxyGroup_special_names(proxy_class):
     module-level namespace clean.
     """
     special_names = """
-        add sub mul mod truediv floordiv div
-        getitem setitem delitem
+        getitem missing setitem delitem
         lt le eq ne gt ge
+        add sub mul matmul truediv floordiv mod divmod pow
+        lshift rshift and xor or div
     """.split()
 
     def proxy_getattr(self, name):
@@ -279,7 +280,8 @@ def _setup_ProxyGroup_special_names(proxy_class):
         setattr(proxy_class, dunder, property(method))
 
     reflected_special_names = """
-        radd rsub rmul rmod rtruediv rfloordiv rdiv
+        radd rsub rmul rmatmul rtruediv rfloordiv rmod rdivmod rpow
+        rlshift rrshift rand rxor ror rdiv
     """.split()
 
     def proxy_reflected_method(self, other, name):
