@@ -72,11 +72,6 @@ except ImportError:
     from collections import Iterable
     from collections import Mapping
 
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
-
 
 class ProxyGroupBase(Iterable):
     """A base class to provide magic methods that operate directly on
