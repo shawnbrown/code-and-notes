@@ -266,7 +266,7 @@ def _setup_ProxyGroup_special_names(proxy_class):
     special_names = """
         getitem missing setitem delitem
         lt le eq ne gt ge
-        add sub mul matmul truediv floordiv mod divmod pow
+        add sub mul matmul truediv floordiv mod pow
         lshift rshift and xor or div
     """.split()
 
@@ -280,25 +280,26 @@ def _setup_ProxyGroup_special_names(proxy_class):
         method = partial(proxy_getattr, name=dunder)
         setattr(proxy_class, dunder, property(method))
 
+    # When a reflected method is called on a ProxyGroup itself,
+    # the original (unreflected) operation is re-applied to the
+    # individual objects contained in the group. If these new
+    # calls are also reflected, they will act on the individual
+    # objects--rather than on the group as a whole.
     reflected_special_names = """
-        radd rsub rmul rmatmul rtruediv rfloordiv rmod rdivmod rpow
+        radd rsub rmul rmatmul rtruediv rfloordiv rmod rpow
         rlshift rrshift rand rxor ror rdiv
     """.split()
 
     def proxy_reflected_method(self, other, name):
-        try:
-            methods = (getattr(obj, name) for obj in self._objs)
-            group = self.__class__(meth(other) for meth in methods)
-        except AttributeError:
-            unreflected_name = name.replace('r', '', 1)  # Remove first 'r'.
-            operation = getattr(operator, unreflected_name)
-            group = self.__class__(operation(other, obj) for obj in self._objs)
+        unreflected_op = name[1:]  # Slice-off 'r' prefix.
+        operation = getattr(operator, unreflected_op)
+        group = self.__class__(operation(other, obj) for obj in self._objs)
         group._keys = self._keys
         return group
 
     for name in reflected_special_names:
         dunder = '__{0}__'.format(name)
-        method = partialmethod(proxy_reflected_method, name=dunder)
+        method = partialmethod(proxy_reflected_method, name=name)
         setattr(proxy_class, dunder, method)
 
 _setup_ProxyGroup_special_names(ProxyGroup)
