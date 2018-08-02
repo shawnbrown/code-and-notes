@@ -256,9 +256,9 @@ class ProxyGroup(ProxyGroupBase):
 
 
 def _setup_ProxyGroup_special_names(proxy_class):
-    """This function is run when the module is imported--users
-    should not call this function directly. It assigns magic
-    methods and special attribute names to the ProxyGroup class.
+    """This function is run when the module is imported--users should
+    not call this function directly. It assigns magic methods and
+    special attribute names to the ProxyGroup class.
 
     This behavior is wrapped in a function to help keep the
     module-level namespace clean.
@@ -280,11 +280,10 @@ def _setup_ProxyGroup_special_names(proxy_class):
         method = partial(proxy_getattr, name=dunder)
         setattr(proxy_class, dunder, property(method))
 
-    # When a reflected method is called on a ProxyGroup itself,
-    # the original (unreflected) operation is re-applied to the
-    # individual objects contained in the group. If these new
-    # calls are also reflected, they will act on the individual
-    # objects--rather than on the group as a whole.
+    # When a reflected method is called on a ProxyGroup itself, the original
+    # (unreflected) operation is re-applied to the individual objects contained
+    # in the group. If these new calls are also reflected, they will act on the
+    # individual objects--rather than on the group as a whole.
     reflected_special_names = """
         radd rsub rmul rmatmul rtruediv rfloordiv rmod rpow
         rlshift rrshift rand rxor ror rdiv
