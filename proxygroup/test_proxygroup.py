@@ -303,9 +303,10 @@ class TestNestedExample(unittest.TestCase):
     """Quick integration test using nested ProxyGroups."""
 
     def setUp(self):
-        subgroup = ProxyGroup(['abc', 'def'])
-        subgroup._keys = ('foo', 'bar')
-        self.group = ProxyGroup([subgroup, 'ghi'])
+        self.group = ProxyGroup([
+            ProxyGroup({'foo': 'abc', 'bar': 'def'}),
+            'ghi',
+        ])
 
     def test_method(self):
         result1, result2 = self.group.upper()
