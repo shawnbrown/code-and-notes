@@ -322,6 +322,30 @@ class TestNestedExample(unittest.TestCase):
         self.assertEqual(dict(result1), {'foo': 'XYZabc', 'bar': 'XYZdef'})
         self.assertEqual(result2, 'XYZghi')
 
+    def test_deeply_nested(self):
+        group = ProxyGroup([
+            ProxyGroup([
+                ProxyGroup(['abc', 'def']),
+                ProxyGroup(['abc', 'def']),
+            ]),
+            ProxyGroup([
+                ProxyGroup(['abc', 'def']),
+                ProxyGroup(['abc', 'def'])
+            ])
+        ])
+
+        result = group + ('xxx' + group.upper())  # <- Operate on ProxyGroup.
+
+        # Unpack various nested values.
+        subresult1, subresult2 = result
+        subresult1a, subresult1b = subresult1
+        subresult2a, subresult2b = subresult2
+
+        self.assertEqual(subresult1a._objs, ('abcxxxABC', 'defxxxDEF'))
+        self.assertEqual(subresult1b._objs, ('abcxxxABC', 'defxxxDEF'))
+        self.assertEqual(subresult2a._objs, ('abcxxxABC', 'defxxxDEF'))
+        self.assertEqual(subresult2b._objs, ('abcxxxABC', 'defxxxDEF'))
+
 
 @unittest.skipIf(not pandas, 'pandas not found')
 class TestPandasExample(unittest.TestCase):
