@@ -101,7 +101,7 @@ class ProxyGroup(ProxyGroupBase):
     is returned with the results.
 
     In the following example, a ProxyGroup with two strings is created.
-    A method call to ``upper()`` is passed on to the individual strings
+    A method call to ``upper()`` is forwarded to the individual strings
     and a new ProxyGroup is returned that contains the uppercase
     values::
 
@@ -125,7 +125,7 @@ class ProxyGroup(ProxyGroupBase):
     If the ProxyGroup was created with a dict (or other mapping),
     then iterating over it will return a sequence of ``(key, value)``
     tuples. This sequence can be used as-is or used to create another
-    mapping::
+    dict::
 
         >>> group = ProxyGroup({'a': 'foo', 'b': 'bar'})
         >>> group = group.upper()
