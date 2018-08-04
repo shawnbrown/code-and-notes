@@ -124,7 +124,7 @@ class ProxyGroup(ProxyGroupBase):
 
     If the ProxyGroup was created with a dict (or other mapping),
     then iterating over it will return a sequence of ``(key, value)``
-    tuples. This sequence can be used as-is used to create another
+    tuples. This sequence can be used as-is or used to create another
     mapping::
 
         >>> group = ProxyGroup({'a': 'foo', 'b': 'bar'})
