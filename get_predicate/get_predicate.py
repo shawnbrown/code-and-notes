@@ -153,6 +153,9 @@ def _get_predicate_parts(value):
     elif isinstance(value, regex_types):
         function = lambda x: (x is value) or (value.search(x) is not None)
         repr_string = 're.compile({0!r})'.format(value.pattern)
+    elif isinstance(value, set):
+        function = lambda x: (x in value) or (x == value)
+        repr_string = repr(value)
     else:
         return None
 
@@ -358,6 +361,22 @@ if __name__ == '__main__':
 
         def test_identity(self):
             self.assertTrue(self.function(self.regex))
+
+
+    class TestSetParts(unittest.TestCase):
+        def test_repr_string(self):
+            myset = set(['a'])
+            _, repr_string = _get_predicate_parts(myset)
+            self.assertEqual(repr_string, repr(myset))
+
+        def test_function(self):
+            function, _ = _get_predicate_parts(set(['abc', 'def']))
+            self.assertTrue(function('abc'))
+            self.assertFalse(function('xyz'))
+
+        def test_whole_set_equality(self):
+            function, _ = _get_predicate_parts(set(['abc', 'def']))
+            self.assertTrue(function(set(['abc', 'def'])))
 
 
     class TestInheritance(unittest.TestCase):
