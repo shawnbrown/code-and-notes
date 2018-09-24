@@ -171,18 +171,18 @@ def _get_matcher_or_original(value):
 
 
 def get_matcher(obj):
-    """Return an object suitable for comparing to other objects
+    """Return an object suitable for comparing against other objects
     using the "==" operator.
 
-    If the original object is already suitable for this purpose,
-    it will be returned unchanged. If special comparison handling
-    is implemented, a PredicateObject will be returned instead.
+    If special comparison handling is implemented, a MatcherObject or
+    MatcherTuple will be returned. If the object is already suitable
+    for this purpose, the original object will be returned unchanged.
     """
     if isinstance(obj, tuple):
-        predicate = tuple(_get_matcher_or_original(x) for x in obj)
-        for x in predicate:
+        matcher = tuple(_get_matcher_or_original(x) for x in obj)
+        for x in matcher:
             if isinstance(x, MatcherBase):
-                return MatcherTuple(predicate)  # <- Wrapper.
+                return MatcherTuple(matcher)  # <- Wrapper.
         return obj  # <- Orignal reference.
 
     return _get_matcher_or_original(obj)
