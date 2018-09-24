@@ -150,6 +150,9 @@ def _get_predicate_parts(value):
     elif value is False:
         function = _is_falsy
         repr_string = 'False'
+    elif isinstance(value, regex_types):
+        function = lambda x: (x is value) or (value.search(x) is not None)
+        repr_string = 're.compile({0!r})'.format(value.pattern)
     else:
         return None
 
@@ -331,6 +334,30 @@ if __name__ == '__main__':
 
         def test_number_zero(self):
             self.assertIsNone(_get_predicate_parts(0))
+
+
+    class TestRegexParts(unittest.TestCase):
+        def setUp(self):
+            regex = re.compile('(Ch|H)ann?ukk?ah?')
+            function, repr_string = _get_predicate_parts(regex)
+            self.regex = regex
+            self.function = function
+            self.repr_string = repr_string
+
+        def test_repr_string(self):
+            self.assertEqual(self.repr_string, "re.compile('(Ch|H)ann?ukk?ah?')")
+
+        def test_function(self):
+            self.assertTrue(self.function('Happy Hanukkah'))
+            self.assertTrue(self.function('Happy Chanukah'))
+            self.assertFalse(self.function('Merry Christmas'))
+
+        def test_error(self):
+            with self.assertRaises(TypeError):
+                self.assertFalse(self.function(123))  # Regex fails with TypeError.
+
+        def test_identity(self):
+            self.assertTrue(self.function(self.regex))
 
 
     class TestInheritance(unittest.TestCase):
