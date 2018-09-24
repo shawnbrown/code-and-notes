@@ -129,6 +129,15 @@ _is_truthy = lambda x: bool(x)
 _is_falsy = lambda x: not bool(x)
 
 
+def _get_predicate_parts(value):
+    """Return a 2-tuple containing a function (to use as a predicate)
+    and string (to use as a repr value). Return None if *value* can be
+    matched with the "==" operator and requires no other special
+    handling.
+    """
+    pass
+
+
 def _get_matcher(value):
     """Return an object suitable for comparing to other values
     using the "==" operator.
