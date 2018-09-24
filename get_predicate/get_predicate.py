@@ -94,21 +94,14 @@ except NameError:
         return any('__call__' in typ.__dict__ for typ in parent_types)
 
 
-class PredicateObject(abc.ABC):
+class MatcherBase(abc.ABC):
     """Base class for objects that implement rich predicate matching."""
     @abc.abstractmethod
     def __repr__(self):
-        return super(PredicateObject, self).__repr__()
+        return super(MatcherBase, self).__repr__()
 
 
-class PredicateTuple(PredicateObject, tuple):
-    """Wrapper to mark tuples that contain one or more PredicateMatcher
-    instances.
-    """
-    pass
-
-
-class PredicateMatcher(PredicateObject):
+class MatcherObject(MatcherBase):
     """Wrapper to call *function* when evaluating the '==' operator."""
     def __init__(self, function, repr_string):
         self._func = function
@@ -122,6 +115,14 @@ class PredicateMatcher(PredicateObject):
 
     def __repr__(self):
         return self._repr
+
+
+class MatcherTuple(MatcherBase, tuple):
+    """Wrapper to mark tuples that contain one or more MatcherObject
+    instances.
+    """
+    pass
+
 
 # Special predicate functions.
 _wildcard = lambda x: True
@@ -167,7 +168,7 @@ def _get_matcher(value):
     using the "==" operator.
 
     When special comparison handling is required, returns a
-    PredicateMatcher instance. When no special comparison is
+    MatcherObject instance. When no special comparison is
     needed, returns the original object unchanged.
     """
     if isinstance(value, type):
@@ -193,7 +194,7 @@ def _get_matcher(value):
         repr_string = repr(value)
     else:
         return value  # <- EXIT!
-    return PredicateMatcher(function, repr_string)
+    return MatcherObject(function, repr_string)
 
 
 def get_predicate(obj):
@@ -202,13 +203,13 @@ def get_predicate(obj):
 
     If the original object is already suitable for this purpose,
     it will be returned unchanged. If special comparison handling
-    is implemented, a PredicateObject will be returned instead.
+    is implemented, a MatcherObject will be returned instead.
     """
     if isinstance(obj, tuple):
         predicate = tuple(_get_matcher(x) for x in obj)
         for x in predicate:
-            if isinstance(x, PredicateObject):
-                return PredicateTuple(predicate)  # <- Wrapper.
+            if isinstance(x, MatcherBase):
+                return MatcherTuple(predicate)  # <- Wrapper.
         return obj  # <- Orignal reference.
 
     return _get_matcher(obj)
@@ -381,8 +382,9 @@ if __name__ == '__main__':
 
     class TestInheritance(unittest.TestCase):
         def test_inheritance(self):
-            self.assertTrue(issubclass(PredicateTuple, PredicateObject))
-            self.assertTrue(issubclass(PredicateMatcher, PredicateObject))
+            self.assertTrue(issubclass(MatcherTuple, MatcherBase))
+            self.assertTrue(issubclass(MatcherObject, MatcherBase))
+
 
     class TestTypeMatcher(unittest.TestCase):
         def test_isinstance(self):
@@ -392,6 +394,7 @@ if __name__ == '__main__':
             self.assertTrue(matcher == 1)
             self.assertFalse(matcher == 0.0)
             self.assertFalse(matcher == 1.0)
+
 
     class TestCallableMatcher(unittest.TestCase):
         def test_equality(self):
@@ -556,20 +559,20 @@ if __name__ == '__main__':
                 self.fail(self._formatMessage(msg, standardMsg))
 
         def test_single_value(self):
-            # Check for PredicateMatcher wrapping.
+            # Check for MatcherObject wrapping.
             def isodd(x):  # <- Helper function.
                 return x % 2 == 1
             predicate = get_predicate(isodd)
-            self.assertIsInstance(predicate, PredicateMatcher)
+            self.assertIsInstance(predicate, MatcherObject)
 
             predicate = get_predicate(Ellipsis)
-            self.assertIsInstance(predicate, PredicateMatcher)
+            self.assertIsInstance(predicate, MatcherObject)
 
             predicate = get_predicate(re.compile('abc'))
-            self.assertIsInstance(predicate, PredicateMatcher)
+            self.assertIsInstance(predicate, MatcherObject)
 
             predicate = get_predicate(set([1, 2, 3]))
-            self.assertIsInstance(predicate, PredicateMatcher)
+            self.assertIsInstance(predicate, MatcherObject)
 
             # When original is adequate, it should be returned unchanged.
             original = 123
@@ -589,22 +592,22 @@ if __name__ == '__main__':
             self.assertIs(predicate, original)
 
         def test_tuple_of_values(self):
-            # Check for PredicateTuple wrapping.
+            # Check for MatcherTuple wrapping.
             def isodd(x):  # <- Helper function.
                 return x % 2 == 1
             predicate = get_predicate((1, isodd))
-            self.assertIsInstance(predicate, PredicateTuple)
+            self.assertIsInstance(predicate, MatcherTuple)
 
             predicate = get_predicate((1, Ellipsis))
-            self.assertIsInstance(predicate, PredicateTuple)
+            self.assertIsInstance(predicate, MatcherTuple)
 
             predicate = get_predicate((1, re.compile('abc')))
-            self.assertIsInstance(predicate, PredicateTuple)
+            self.assertIsInstance(predicate, MatcherTuple)
 
             predicate = get_predicate((1, set([1, 2, 3])))
-            self.assertIsInstance(predicate, PredicateTuple)
+            self.assertIsInstance(predicate, MatcherTuple)
 
-            # When tuple contains no PredicateMatcher objects,
+            # When tuple contains no MatcherObject objects,
             # the original should be returned unchanged.
             original = ('abc', 123)
             predicate = get_predicate(original)
