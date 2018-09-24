@@ -144,6 +144,12 @@ def _get_predicate_parts(value):
     elif value is Ellipsis:
         function = _wildcard  # <- Matches everything.
         repr_string = '...'
+    elif value is True:
+        function = _is_truthy
+        repr_string = 'True'
+    elif value is False:
+        function = _is_falsy
+        repr_string = 'False'
     else:
         return None
 
@@ -275,6 +281,56 @@ if __name__ == '__main__':
             self.assertTrue(function(1))
             self.assertTrue(function(object()))
             self.assertTrue(function(None))
+
+
+    class TestTruthyParts(unittest.TestCase):
+        def setUp(self):
+            function, repr_string = _get_predicate_parts(True)
+            self.function = function
+            self.repr_string = repr_string
+
+        def test_repr_string(self):
+            self.assertEqual(self.repr_string, 'True')
+
+        def test_matches(self):
+            self.assertTrue(self.function('x'))
+            self.assertTrue(self.function(1.0))
+            self.assertTrue(self.function([1]))
+            self.assertTrue(self.function(range(1)))
+
+        def test_nonmatches(self):
+            self.assertFalse(self.function(''))
+            self.assertFalse(self.function(0.0))
+            self.assertFalse(self.function([]))
+            self.assertFalse(self.function(range(0)))
+
+        def test_number_one(self):
+            self.assertIsNone(_get_predicate_parts(1))
+
+
+    class TestFalsyParts(unittest.TestCase):
+        def setUp(self):
+            function, repr_string = _get_predicate_parts(False)
+            self.function = function
+            self.repr_string = repr_string
+
+        def test_repr_string(self):
+            self.assertEqual(self.repr_string, 'False')
+
+        def test_matches(self):
+            self.assertTrue(self.function(''))
+            self.assertTrue(self.function(0.0))
+            self.assertTrue(self.function([]))
+            self.assertTrue(self.function(range(0)))
+
+        def test_nonmatches(self):
+            self.assertFalse(self.function('x'))
+            self.assertFalse(self.function(1.0))
+            self.assertFalse(self.function([1]))
+            self.assertFalse(self.function(range(1)))
+
+        def test_number_zero(self):
+            self.assertIsNone(_get_predicate_parts(0))
 
 
     class TestInheritance(unittest.TestCase):
