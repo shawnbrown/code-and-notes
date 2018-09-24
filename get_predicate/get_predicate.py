@@ -141,6 +141,9 @@ def _get_predicate_parts(value):
     elif callable(value):
         function = lambda x: (x is value) or value(x)
         repr_string = getattr(value, '__name__', repr(value))
+    elif value is Ellipsis:
+        function = _wildcard  # <- Matches everything.
+        repr_string = '...'
     else:
         return None
 
@@ -230,8 +233,8 @@ if __name__ == '__main__':
         def test_function(self):
             def divisible3or5(x):  # <- Helper function.
                 return (x % 3 == 0) or (x % 5 == 0)
-            function, _ = _get_predicate_parts(divisible3or5)
 
+            function, _ = _get_predicate_parts(divisible3or5)
             self.assertFalse(function(1))
             self.assertFalse(function(2))
             self.assertTrue(function(3))
@@ -242,24 +245,36 @@ if __name__ == '__main__':
         def test_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            function, _ = _get_predicate_parts(fails_internally)
 
+            function, _ = _get_predicate_parts(fails_internally)
             with self.assertRaises(TypeError):
                 self.assertFalse(function('abc'))
 
         def test_identity(self):
-            def always_false(x):
+            def always_false(x):  # <- Helper function.
                 return False
-            function, _ = _get_predicate_parts(always_false)
 
+            function, _ = _get_predicate_parts(always_false)
             self.assertTrue(function(always_false))
 
         def test_identity_with_error(self):
             def fails_internally(x):  # <- Helper function.
                 raise TypeError('raising an error')
-            function, _ = _get_predicate_parts(fails_internally)
 
+            function, _ = _get_predicate_parts(fails_internally)
             self.assertTrue(function(fails_internally))
+
+
+    class TestEllipsisParts(unittest.TestCase):
+        def test_repr_string(self):
+            _, repr_string = _get_predicate_parts(Ellipsis)
+            self.assertEqual(repr_string, '...')
+
+        def test_function(self):
+            function, _ = _get_predicate_parts(Ellipsis)
+            self.assertTrue(function(1))
+            self.assertTrue(function(object()))
+            self.assertTrue(function(None))
 
 
     class TestInheritance(unittest.TestCase):
