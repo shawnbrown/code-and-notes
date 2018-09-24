@@ -135,7 +135,13 @@ def _get_predicate_parts(value):
     matched with the "==" operator and requires no other special
     handling.
     """
-    pass
+    if isinstance(value, type):
+        function = lambda x: (x is value) or isinstance(x, value)
+        repr_string = getattr(value, '__name__', repr(value))
+    else:
+        return None
+
+    return function, repr_string
 
 
 def _get_matcher(value):
@@ -192,6 +198,19 @@ def get_predicate(obj):
 
 if __name__ == '__main__':
     import unittest
+
+
+    class TestTypeParts(unittest.TestCase):
+        def test_repr_string(self):
+            _, repr_string = _get_predicate_parts(int)
+            self.assertEqual(repr_string, 'int')
+
+        def test_function(self):
+            function, _ = _get_predicate_parts(int)
+            self.assertTrue(function(0))
+            self.assertTrue(function(1))
+            self.assertFalse(function(0.0))
+            self.assertFalse(function(1.0))
 
 
     class TestInheritance(unittest.TestCase):
