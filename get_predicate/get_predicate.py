@@ -163,6 +163,31 @@ def _get_predicate_parts(value):
     return function, repr_string
 
 
+def _get_matcher_or_original(value):
+    parts = _get_predicate_parts(value)
+    if parts:
+        return MatcherObject(*parts)
+    return value
+
+
+def get_matcher(obj):
+    """Return an object suitable for comparing to other objects
+    using the "==" operator.
+
+    If the original object is already suitable for this purpose,
+    it will be returned unchanged. If special comparison handling
+    is implemented, a PredicateObject will be returned instead.
+    """
+    if isinstance(obj, tuple):
+        predicate = tuple(_get_matcher_or_original(x) for x in obj)
+        for x in predicate:
+            if isinstance(x, MatcherBase):
+                return MatcherTuple(predicate)  # <- Wrapper.
+        return obj  # <- Orignal reference.
+
+    return _get_matcher_or_original(obj)
+
+
 def _get_matcher(value):
     """Return an object suitable for comparing to other values
     using the "==" operator.
@@ -380,10 +405,94 @@ if __name__ == '__main__':
             self.assertTrue(function(set(['abc', 'def'])))
 
 
-    class TestInheritance(unittest.TestCase):
+    class TestMatcherInheritance(unittest.TestCase):
         def test_inheritance(self):
             self.assertTrue(issubclass(MatcherTuple, MatcherBase))
             self.assertTrue(issubclass(MatcherObject, MatcherBase))
+
+
+    class TestGetMatcher(unittest.TestCase):
+        def assertIsInstance(self, obj, cls, msg=None):  # New in Python 3.2.
+            if not isinstance(obj, cls):
+                standardMsg = '%s is not an instance of %r' % (safe_repr(obj), cls)
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def test_single_value(self):
+            # Check for MatcherObject wrapping.
+            def isodd(x):  # <- Helper function.
+                return x % 2 == 1
+            matcher = get_matcher(isodd)
+            self.assertIsInstance(matcher, MatcherObject)
+
+            matcher = get_matcher(Ellipsis)
+            self.assertIsInstance(matcher, MatcherObject)
+
+            matcher = get_matcher(re.compile('abc'))
+            self.assertIsInstance(matcher, MatcherObject)
+
+            matcher = get_matcher(set([1, 2, 3]))
+            self.assertIsInstance(matcher, MatcherObject)
+
+            # When original is adequate, it should be returned unchanged.
+            original = 123
+            matcher = get_matcher(original)
+            self.assertIs(matcher, original)
+
+            original = 'abc'
+            matcher = get_matcher(original)
+            self.assertIs(matcher, original)
+
+            original = ['abc', 123]
+            matcher = get_matcher(original)
+            self.assertIs(matcher, original)
+
+            original = object()
+            matcher = get_matcher(original)
+            self.assertIs(matcher, original)
+
+        def test_tuple_of_values(self):
+            # Check for MatcherTuple wrapping.
+            def isodd(x):  # <- Helper function.
+                return x % 2 == 1
+            matcher = get_matcher((1, isodd))
+            self.assertIsInstance(matcher, MatcherTuple)
+
+            matcher = get_matcher((1, Ellipsis))
+            self.assertIsInstance(matcher, MatcherTuple)
+
+            matcher = get_matcher((1, re.compile('abc')))
+            self.assertIsInstance(matcher, MatcherTuple)
+
+            matcher = get_matcher((1, set([1, 2, 3])))
+            self.assertIsInstance(matcher, MatcherTuple)
+
+            # When tuple contains no MatcherObject objects,
+            # the original should be returned unchanged.
+            original = ('abc', 123)
+            matcher = get_matcher(original)
+            self.assertIs(matcher, original)
+
+        def test_integration(self):
+            def mycallable(x):  # <- Helper function.
+                return x == '_'
+
+            myregex = re.compile('_')
+
+            myset = set(['_'])
+
+            matcher = get_matcher(
+                (mycallable,  myregex, myset, '_', Ellipsis)
+            )
+
+            self.assertTrue(matcher == ('_', '_', '_', '_', '_'))   # <- Passes all conditions.
+            self.assertFalse(matcher == ('X', '_', '_', '_', '_'))  # <- Callable returns False.
+            self.assertFalse(matcher == ('_', 'X', '_', '_', '_'))  # <- Regex has no match.
+            self.assertFalse(matcher == ('_', '_', 'X', '_', '_'))  # <- Not in set.
+            self.assertFalse(matcher == ('_', '_', '_', 'X', '_'))  # <- Does not equal string.
+            self.assertTrue(matcher == ('_', '_', '_', '_', 'X'))   # <- Passes all conditions (wildcard).
+
+            expected = "(mycallable, re.compile('_'), {0!r}, '_', ...)".format(myset)
+            self.assertEqual(repr(matcher), expected)
 
 
     class TestTypeMatcher(unittest.TestCase):
