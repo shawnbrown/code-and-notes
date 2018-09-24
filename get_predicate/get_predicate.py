@@ -277,7 +277,7 @@ if __name__ == '__main__':
             self.assertTrue(function(fails_internally))
 
 
-    class TestEllipsisParts(unittest.TestCase):
+    class TestEllipsisWildcardParts(unittest.TestCase):
         def test_repr_string(self):
             _, repr_string = _get_predicate_parts(Ellipsis)
             self.assertEqual(repr_string, '...')
