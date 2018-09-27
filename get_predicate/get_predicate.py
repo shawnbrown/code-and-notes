@@ -195,9 +195,14 @@ class Predicate(object):
     def __init__(self, obj):
         matcher = get_matcher(obj)
         self._pred_function = matcher.__eq__
+        self._repr_string = repr(matcher)
 
     def __call__(self, other):
         return self._pred_function(other)
+
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        return '{0}({1})'.format(cls_name, self._repr_string)
 
 
 if __name__ == '__main__':
@@ -464,6 +469,10 @@ if __name__ == '__main__':
             pred = Predicate(('abc', int))
             self.assertTrue(pred(('abc', 1)))
             self.assertFalse(pred(('abc', 1.0)))
+
+        def test_repr(self):
+            pred = Predicate('abc')
+            self.assertEqual(repr(pred), "Predicate('abc')")
 
 
     unittest.main()
