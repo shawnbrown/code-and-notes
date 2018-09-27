@@ -188,6 +188,18 @@ def get_matcher(obj):
     return _get_matcher_or_original(obj)
 
 
+class Predicate(object):
+    """Returns a callable object that can be used as a functional
+    predicate.
+    """
+    def __init__(self, obj):
+        matcher = get_matcher(obj)
+        self._pred_function = matcher.__eq__
+
+    def __call__(self, other):
+        return self._pred_function(other)
+
+
 if __name__ == '__main__':
     import unittest
 
@@ -441,6 +453,17 @@ if __name__ == '__main__':
 
             expected = "(mycallable, re.compile('_'), {0!r}, '_', ...)".format(myset)
             self.assertEqual(repr(matcher), expected)
+
+
+    class TestPredicate(unittest.TestCase):
+        def test_predicate_function(self):
+            pred = Predicate('abc')
+            self.assertTrue(pred('abc'))
+            self.assertFalse(pred('def'))
+
+            pred = Predicate(('abc', int))
+            self.assertTrue(pred(('abc', 1)))
+            self.assertFalse(pred(('abc', 1.0)))
 
 
     unittest.main()
