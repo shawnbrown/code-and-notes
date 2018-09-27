@@ -196,13 +196,25 @@ class Predicate(object):
         matcher = get_matcher(obj)
         self._pred_function = matcher.__eq__
         self._repr_string = repr(matcher)
+        self._inverted = False
 
     def __call__(self, other):
-        return self._pred_function(other)
+        result = self._pred_function(other)
+        if self._inverted:
+            return not result
+        return result
+
+    def __invert__(self):
+        new_pred = self.__class__.__new__(self.__class__)
+        new_pred._pred_function = self._pred_function
+        new_pred._repr_string = self._repr_string
+        new_pred._inverted = not self._inverted
+        return new_pred
 
     def __repr__(self):
         cls_name = self.__class__.__name__
-        return '{0}({1})'.format(cls_name, self._repr_string)
+        inverted = '~' if self._inverted else ''
+        return '{0}{1}({2})'.format(inverted, cls_name, self._repr_string)
 
 
 if __name__ == '__main__':
@@ -470,9 +482,17 @@ if __name__ == '__main__':
             self.assertTrue(pred(('abc', 1)))
             self.assertFalse(pred(('abc', 1.0)))
 
+        def test_inverted_logic(self):
+            pred = ~Predicate('abc')
+            self.assertFalse(pred('abc'))
+            self.assertTrue(pred('def'))
+
         def test_repr(self):
             pred = Predicate('abc')
             self.assertEqual(repr(pred), "Predicate('abc')")
+
+            pred = ~Predicate('abc')
+            self.assertEqual(repr(pred), "~Predicate('abc')")
 
 
     unittest.main()
