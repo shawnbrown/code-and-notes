@@ -124,10 +124,19 @@ class MatcherTuple(MatcherBase, tuple):
     pass
 
 
-# Special predicate functions.
-_wildcard = lambda x: True
-_is_truthy = lambda x: bool(x)
-_is_falsy = lambda x: not bool(x)
+def _wildcard_predicate(value):
+    """Predicate function that always returns True."""
+    return True
+
+
+def _truthy_predicate(value):
+    """Predicate function that returns True if value is truthy."""
+    return bool(value)
+
+
+def _falsy_predicate(value):
+    """Predicate function that returns True if value is falsy."""
+    return not bool(value)
 
 
 def _get_matcher_parts(value):
@@ -143,13 +152,13 @@ def _get_matcher_parts(value):
         pred_function = lambda x: (x is value) or value(x)
         repr_string = getattr(value, '__name__', repr(value))
     elif value is Ellipsis:
-        pred_function = _wildcard  # <- Matches everything.
+        pred_function = _wildcard_predicate  # <- Matches everything.
         repr_string = '...'
     elif value is True:
-        pred_function = _is_truthy
+        pred_function = _truthy_predicate
         repr_string = 'True'
     elif value is False:
-        pred_function = _is_falsy
+        pred_function = _falsy_predicate
         repr_string = 'False'
     elif isinstance(value, regex_types):
         pred_function = lambda x: (x is value) or (value.search(x) is not None)
