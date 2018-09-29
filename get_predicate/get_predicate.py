@@ -139,6 +139,23 @@ def _falsy_predicate(value):
     return not bool(value)
 
 
+def _regex_predicate(regex, value):
+    """Predicate function that returns True if value matches regex."""
+    try:
+        return regex.search(value) is not None
+    except TypeError:
+        if value is regex:
+            return True  # <- EXIT!
+
+        value_repr = repr(value)
+        if len(value_repr) > 45:
+            value_repr = value_repr[:42] + '...'
+        msg = 'expected string or bytes-like object, got {0}: {1}'
+        exc = TypeError(msg.format(value.__class__.__name__, value_repr))
+        exc.__cause__ = None
+        raise exc
+
+
 def _get_matcher_parts(value):
     """Return a 2-tuple containing a function (to use as a predicate)
     and string (to use for displaying a user-readable value). Return
@@ -161,7 +178,7 @@ def _get_matcher_parts(value):
         pred_function = _falsy_predicate
         repr_string = 'False'
     elif isinstance(value, regex_types):
-        pred_function = lambda x: (x is value) or (value.search(x) is not None)
+        pred_function = lambda x: _regex_predicate(value, x)
         repr_string = 're.compile({0!r})'.format(value.pattern)
     elif isinstance(value, set):
         pred_function = lambda x: (x in value) or (x == value)
@@ -368,8 +385,11 @@ if __name__ == '__main__':
             self.assertFalse(self.function('Merry Christmas'))
 
         def test_error(self):
-            with self.assertRaises(TypeError):
+            with self.assertRaisesRegex(TypeError, "got int: 123"):
                 self.assertFalse(self.function(123))  # Regex fails with TypeError.
+
+            with self.assertRaisesRegex(TypeError, "got tuple: \('a', 'b'\)"):
+                self.assertFalse(self.function(('a', 'b')))
 
         def test_identity(self):
             self.assertTrue(self.function(self.regex))
