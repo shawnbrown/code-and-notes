@@ -3,6 +3,13 @@
 import unittest
 import re
 
+from predicate import _type_predicate
+from predicate import _callable_predicate
+from predicate import _wildcard_predicate
+from predicate import _truthy_predicate
+from predicate import _falsy_predicate
+from predicate import _regex_predicate
+from predicate import _set_predicate
 from predicate import _get_matcher_parts
 from predicate import get_matcher
 from predicate import MatcherBase
@@ -11,35 +18,24 @@ from predicate import MatcherTuple
 from predicate import Predicate
 
 
-class TestTypeParts(unittest.TestCase):
-    def test_repr_string(self):
-        _, repr_string = _get_matcher_parts(int)
-        self.assertEqual(repr_string, 'int')
-
-    def test_function(self):
-        function, _ = _get_matcher_parts(int)
+class TestTypePredicate(unittest.TestCase):
+    def test_isinstance(self):
+        function = lambda x: _type_predicate(int, x)
         self.assertTrue(function(0))
         self.assertTrue(function(1))
         self.assertFalse(function(0.0))
         self.assertFalse(function(1.0))
 
+    def test_is_type(self):
+        self.assertTrue(_type_predicate(int, int))
 
-class TestCallableParts(unittest.TestCase):
-    def test_repr_string(self):
-        def userfunc(x):
-            return True
-        _, repr_string = _get_matcher_parts(userfunc)
-        self.assertEqual(repr_string, 'userfunc')
 
-        userlambda = lambda x: True
-        _, repr_string = _get_matcher_parts(userlambda)
-        self.assertEqual(repr_string, '<lambda>')
-
+class TestCallablePredicate(unittest.TestCase):
     def test_function(self):
         def divisible3or5(x):  # <- Helper function.
             return (x % 3 == 0) or (x % 5 == 0)
 
-        function, _ = _get_matcher_parts(divisible3or5)
+        function = lambda x: _callable_predicate(divisible3or5, x)
         self.assertFalse(function(1))
         self.assertFalse(function(2))
         self.assertTrue(function(3))
@@ -51,7 +47,7 @@ class TestCallableParts(unittest.TestCase):
         def fails_internally(x):  # <- Helper function.
             raise TypeError('raising an error')
 
-        function, _ = _get_matcher_parts(fails_internally)
+        function = lambda x: _callable_predicate(fails_internally, x)
         with self.assertRaises(TypeError):
             self.assertFalse(function('abc'))
 
@@ -59,120 +55,139 @@ class TestCallableParts(unittest.TestCase):
         def always_false(x):  # <- Helper function.
             return False
 
-        function, _ = _get_matcher_parts(always_false)
+        function = lambda x: _callable_predicate(always_false, x)
         self.assertTrue(function(always_false))
 
     def test_identity_with_error(self):
         def fails_internally(x):  # <- Helper function.
             raise TypeError('raising an error')
 
-        function, _ = _get_matcher_parts(fails_internally)
+        function = lambda x: _callable_predicate(fails_internally, x)
         self.assertTrue(function(fails_internally))
 
 
 class TestEllipsisWildcardParts(unittest.TestCase):
-    def test_repr_string(self):
-        _, repr_string = _get_matcher_parts(Ellipsis)
-        self.assertEqual(repr_string, '...')
-
-    def test_function(self):
-        function, _ = _get_matcher_parts(Ellipsis)
-        self.assertTrue(function(1))
-        self.assertTrue(function(object()))
-        self.assertTrue(function(None))
+    def test_always_true(self):
+        self.assertTrue(_wildcard_predicate(1))
+        self.assertTrue(_wildcard_predicate(object()))
+        self.assertTrue(_wildcard_predicate(None))
 
 
 class TestTruthyParts(unittest.TestCase):
-    def setUp(self):
-        function, repr_string = _get_matcher_parts(True)
-        self.function = function
-        self.repr_string = repr_string
-
-    def test_repr_string(self):
-        self.assertEqual(self.repr_string, 'True')
-
     def test_matches(self):
-        self.assertTrue(self.function('x'))
-        self.assertTrue(self.function(1.0))
-        self.assertTrue(self.function([1]))
-        self.assertTrue(self.function(range(1)))
+        self.assertTrue(_truthy_predicate('x'))
+        self.assertTrue(_truthy_predicate(1.0))
+        self.assertTrue(_truthy_predicate([1]))
+        self.assertTrue(_truthy_predicate(range(1)))
 
     def test_nonmatches(self):
-        self.assertFalse(self.function(''))
-        self.assertFalse(self.function(0.0))
-        self.assertFalse(self.function([]))
-        self.assertFalse(self.function(range(0)))
-
-    def test_number_one(self):
-        self.assertIsNone(_get_matcher_parts(1))
+        self.assertFalse(_truthy_predicate(''))
+        self.assertFalse(_truthy_predicate(0.0))
+        self.assertFalse(_truthy_predicate([]))
+        self.assertFalse(_truthy_predicate(range(0)))
 
 
 class TestFalsyParts(unittest.TestCase):
-    def setUp(self):
-        function, repr_string = _get_matcher_parts(False)
-        self.function = function
-        self.repr_string = repr_string
-
-    def test_repr_string(self):
-        self.assertEqual(self.repr_string, 'False')
-
     def test_matches(self):
-        self.assertTrue(self.function(''))
-        self.assertTrue(self.function(0.0))
-        self.assertTrue(self.function([]))
-        self.assertTrue(self.function(range(0)))
+        self.assertTrue(_falsy_predicate(''))
+        self.assertTrue(_falsy_predicate(0.0))
+        self.assertTrue(_falsy_predicate([]))
+        self.assertTrue(_falsy_predicate(range(0)))
 
     def test_nonmatches(self):
-        self.assertFalse(self.function('x'))
-        self.assertFalse(self.function(1.0))
-        self.assertFalse(self.function([1]))
-        self.assertFalse(self.function(range(1)))
-
-    def test_number_zero(self):
-        self.assertIsNone(_get_matcher_parts(0))
+        self.assertFalse(_falsy_predicate('x'))
+        self.assertFalse(_falsy_predicate(1.0))
+        self.assertFalse(_falsy_predicate([1]))
+        self.assertFalse(_falsy_predicate(range(1)))
 
 
 class TestRegexParts(unittest.TestCase):
-    def setUp(self):
-        regex = re.compile('(Ch|H)ann?ukk?ah?')
-        function, repr_string = _get_matcher_parts(regex)
-        self.regex = regex
-        self.function = function
-        self.repr_string = repr_string
-
-    def test_repr_string(self):
-        self.assertEqual(self.repr_string, "re.compile('(Ch|H)ann?ukk?ah?')")
-
     def test_function(self):
-        self.assertTrue(self.function('Happy Hanukkah'))
-        self.assertTrue(self.function('Happy Chanukah'))
-        self.assertFalse(self.function('Merry Christmas'))
+        regex = re.compile('(Ch|H)ann?ukk?ah?')
+        function = lambda x: _regex_predicate(regex, x)
+
+        self.assertTrue(function('Happy Hanukkah'))
+        self.assertTrue(function('Happy Chanukah'))
+        self.assertFalse(function('Merry Christmas'))
 
     def test_error(self):
+        regex = re.compile('abc')
         with self.assertRaisesRegex(TypeError, "got int: 123"):
-            self.assertFalse(self.function(123))  # Regex fails with TypeError.
+            self.assertFalse(_regex_predicate(regex, 123))  # Regex fails with TypeError.
 
         with self.assertRaisesRegex(TypeError, "got tuple: \('a', 'b'\)"):
-            self.assertFalse(self.function(('a', 'b')))
+            self.assertFalse(_regex_predicate(regex, ('a', 'b')))
 
     def test_identity(self):
-        self.assertTrue(self.function(self.regex))
+        regex = re.compile('abc')
+        self.assertTrue(_regex_predicate(regex, regex))
 
 
 class TestSetParts(unittest.TestCase):
-    def test_repr_string(self):
-        myset = set(['a'])
-        _, repr_string = _get_matcher_parts(myset)
-        self.assertEqual(repr_string, repr(myset))
-
     def test_function(self):
-        function, _ = _get_matcher_parts(set(['abc', 'def']))
+        function = lambda x: _set_predicate(set(['abc', 'def']), x)
         self.assertTrue(function('abc'))
         self.assertFalse(function('xyz'))
 
     def test_whole_set_equality(self):
-        function, _ = _get_matcher_parts(set(['abc', 'def']))
+        function = lambda x: _set_predicate(set(['abc', 'def']), x)
         self.assertTrue(function(set(['abc', 'def'])))
+
+
+class TestGetMatcherParts(unittest.TestCase):
+    def test_type(self):
+        pred_function, repr_string = _get_matcher_parts(int)
+        self.assertTrue(pred_function(1))
+        self.assertFalse(pred_function(1.0))
+        self.assertEqual(repr_string, 'int')
+
+    def test_callable(self):
+        def userfunc(x):
+            return x == 1
+        pred_function, repr_string = _get_matcher_parts(userfunc)
+        self.assertTrue(pred_function(1))
+        self.assertFalse(pred_function(2))
+        self.assertEqual(repr_string, 'userfunc')
+
+        userlambda = lambda x: x == 1
+        pred_function, repr_string = _get_matcher_parts(userlambda)
+        self.assertTrue(pred_function(1))
+        self.assertFalse(pred_function(2))
+        self.assertEqual(repr_string, '<lambda>')
+
+    def test_ellipsis_wildcard(self):
+        pred_function, repr_string = _get_matcher_parts(Ellipsis)
+        self.assertIs(pred_function, _wildcard_predicate)
+        self.assertEqual(repr_string, '...')
+
+    def test_truthy(self):
+        pred_function, repr_string = _get_matcher_parts(True)
+        self.assertIs(pred_function, _truthy_predicate)
+        self.assertEqual(repr_string, 'True')
+
+    def test_falsy(self):
+        pred_function, repr_string = _get_matcher_parts(False)
+        self.assertIs(pred_function, _falsy_predicate)
+        self.assertEqual(repr_string, 'False')
+
+    def test_regex(self):
+        regex = re.compile('ab[cd]')
+
+        pred_function, repr_string = _get_matcher_parts(regex)
+        self.assertTrue(pred_function('abc'))
+        self.assertFalse(pred_function('abe'))
+        self.assertEqual(repr_string, "re.compile('ab[cd]')")
+
+    def test_set(self):
+        myset = set(['a'])
+        pred_function, repr_string = _get_matcher_parts(myset)
+        self.assertTrue(pred_function('a'))
+        self.assertFalse(pred_function('b'))
+        self.assertEqual(repr_string, repr(myset))
+
+    def test_no_special_handling(self):
+        self.assertIsNone(_get_matcher_parts(1))
+        self.assertIsNone(_get_matcher_parts(0))
 
 
 class TestMatcherInheritance(unittest.TestCase):
@@ -194,28 +209,7 @@ class TestGetMatcher(unittest.TestCase):
         matcher = get_matcher(isodd)
         self.assertIsInstance(matcher, MatcherObject)
 
-        matcher = get_matcher(Ellipsis)
-        self.assertIsInstance(matcher, MatcherObject)
-
-        matcher = get_matcher(re.compile('abc'))
-        self.assertIsInstance(matcher, MatcherObject)
-
-        matcher = get_matcher(set([1, 2, 3]))
-        self.assertIsInstance(matcher, MatcherObject)
-
         # When original is adequate, it should be returned unchanged.
-        original = 123
-        matcher = get_matcher(original)
-        self.assertIs(matcher, original)
-
-        original = 'abc'
-        matcher = get_matcher(original)
-        self.assertIs(matcher, original)
-
-        original = ['abc', 123]
-        matcher = get_matcher(original)
-        self.assertIs(matcher, original)
-
         original = object()
         matcher = get_matcher(original)
         self.assertIs(matcher, original)
@@ -227,15 +221,6 @@ class TestGetMatcher(unittest.TestCase):
         matcher = get_matcher((1, isodd))
         self.assertIsInstance(matcher, MatcherTuple)
 
-        matcher = get_matcher((1, Ellipsis))
-        self.assertIsInstance(matcher, MatcherTuple)
-
-        matcher = get_matcher((1, re.compile('abc')))
-        self.assertIsInstance(matcher, MatcherTuple)
-
-        matcher = get_matcher((1, set([1, 2, 3])))
-        self.assertIsInstance(matcher, MatcherTuple)
-
         # When tuple contains no MatcherObject objects,
         # the original should be returned unchanged.
         original = ('abc', 123)
@@ -243,6 +228,9 @@ class TestGetMatcher(unittest.TestCase):
         self.assertIs(matcher, original)
 
     def test_integration(self):
+        """A small integration test that checks a tuple containing all
+        of the different special handling cases.
+        """
         def mycallable(x):  # <- Helper function.
             return x == '_'
 
