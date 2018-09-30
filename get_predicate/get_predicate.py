@@ -124,6 +124,18 @@ class MatcherTuple(MatcherBase, tuple):
     pass
 
 
+def _type_predicate(type_, value):
+    """Predicate function that returns True if value is of specified
+    type.
+    """
+    return value is type_ or isinstance(value, type_)
+
+
+def _callable_predicate(func, value):
+    """Predicate function that returns True if func(value) is true."""
+    return value is func or func(value)
+
+
 def _wildcard_predicate(value):
     """Predicate function that always returns True."""
     return True
@@ -156,6 +168,11 @@ def _regex_predicate(regex, value):
         raise exc
 
 
+def _set_predicate(set_, value):
+    """Predicate function that returns True if func(value) is true."""
+    return value in set_ or value == set_
+
+
 def _get_matcher_parts(value):
     """Return a 2-tuple containing a function (to use as a predicate)
     and string (to use for displaying a user-readable value). Return
@@ -163,10 +180,10 @@ def _get_matcher_parts(value):
     no other special handling.
     """
     if isinstance(value, type):
-        pred_function = lambda x: (x is value) or isinstance(x, value)
+        pred_function = lambda x: _type_predicate(value, x)
         repr_string = getattr(value, '__name__', repr(value))
     elif callable(value):
-        pred_function = lambda x: (x is value) or value(x)
+        pred_function = lambda x: _callable_predicate(value, x)
         repr_string = getattr(value, '__name__', repr(value))
     elif value is Ellipsis:
         pred_function = _wildcard_predicate  # <- Matches everything.
@@ -181,7 +198,7 @@ def _get_matcher_parts(value):
         pred_function = lambda x: _regex_predicate(value, x)
         repr_string = 're.compile({0!r})'.format(value.pattern)
     elif isinstance(value, set):
-        pred_function = lambda x: (x in value) or (x == value)
+        pred_function = lambda x: _set_predicate(value, x)
         repr_string = repr(value)
     else:
         return None
