@@ -173,44 +173,44 @@ def _set_predicate(set_, value):
     return value in set_ or value == set_
 
 
-def _get_matcher_parts(value):
+def _get_matcher_parts(obj):
     """Return a 2-tuple containing a function (to use as a predicate)
     and string (to use for displaying a user-readable value). Return
-    None if *value* can be matched with the "==" operator and requires
+    None if *obj* can be matched with the "==" operator and requires
     no other special handling.
     """
-    if isinstance(value, type):
-        pred_function = lambda x: _type_predicate(value, x)
-        repr_string = getattr(value, '__name__', repr(value))
-    elif callable(value):
-        pred_function = lambda x: _callable_predicate(value, x)
-        repr_string = getattr(value, '__name__', repr(value))
-    elif value is Ellipsis:
+    if isinstance(obj, type):
+        pred_function = lambda x: _type_predicate(obj, x)
+        repr_string = getattr(obj, '__name__', repr(obj))
+    elif callable(obj):
+        pred_function = lambda x: _callable_predicate(obj, x)
+        repr_string = getattr(obj, '__name__', repr(obj))
+    elif obj is Ellipsis:
         pred_function = _wildcard_predicate  # <- Matches everything.
         repr_string = '...'
-    elif value is True:
+    elif obj is True:
         pred_function = _truthy_predicate
         repr_string = 'True'
-    elif value is False:
+    elif obj is False:
         pred_function = _falsy_predicate
         repr_string = 'False'
-    elif isinstance(value, regex_types):
-        pred_function = lambda x: _regex_predicate(value, x)
-        repr_string = 're.compile({0!r})'.format(value.pattern)
-    elif isinstance(value, set):
-        pred_function = lambda x: _set_predicate(value, x)
-        repr_string = repr(value)
+    elif isinstance(obj, regex_types):
+        pred_function = lambda x: _regex_predicate(obj, x)
+        repr_string = 're.compile({0!r})'.format(obj.pattern)
+    elif isinstance(obj, set):
+        pred_function = lambda x: _set_predicate(obj, x)
+        repr_string = repr(obj)
     else:
         return None
 
     return pred_function, repr_string
 
 
-def _get_matcher_or_original(value):
-    parts = _get_matcher_parts(value)
+def _get_matcher_or_original(obj):
+    parts = _get_matcher_parts(obj)
     if parts:
         return MatcherObject(*parts)
-    return value
+    return obj
 
 
 def get_matcher(obj):
