@@ -3,13 +3,13 @@
 import unittest
 import re
 
-from predicate import _type_predicate
-from predicate import _callable_predicate
-from predicate import _wildcard_predicate
-from predicate import _truthy_predicate
-from predicate import _falsy_predicate
-from predicate import _regex_predicate
-from predicate import _set_predicate
+from predicate import _check_type
+from predicate import _check_callable
+from predicate import _check_wildcard
+from predicate import _check_truthy
+from predicate import _check_falsy
+from predicate import _check_regex
+from predicate import _check_set
 from predicate import _get_matcher_parts
 from predicate import get_matcher
 from predicate import MatcherBase
@@ -18,24 +18,24 @@ from predicate import MatcherTuple
 from predicate import Predicate
 
 
-class TestTypePredicate(unittest.TestCase):
+class TestCheckType(unittest.TestCase):
     def test_isinstance(self):
-        function = lambda x: _type_predicate(int, x)
+        function = lambda x: _check_type(int, x)
         self.assertTrue(function(0))
         self.assertTrue(function(1))
         self.assertFalse(function(0.0))
         self.assertFalse(function(1.0))
 
     def test_is_type(self):
-        self.assertTrue(_type_predicate(int, int))
+        self.assertTrue(_check_type(int, int))
 
 
-class TestCallablePredicate(unittest.TestCase):
+class TestCheckCallable(unittest.TestCase):
     def test_function(self):
         def divisible3or5(x):  # <- Helper function.
             return (x % 3 == 0) or (x % 5 == 0)
 
-        function = lambda x: _callable_predicate(divisible3or5, x)
+        function = lambda x: _check_callable(divisible3or5, x)
         self.assertFalse(function(1))
         self.assertFalse(function(2))
         self.assertTrue(function(3))
@@ -47,7 +47,7 @@ class TestCallablePredicate(unittest.TestCase):
         def fails_internally(x):  # <- Helper function.
             raise TypeError('raising an error')
 
-        function = lambda x: _callable_predicate(fails_internally, x)
+        function = lambda x: _check_callable(fails_internally, x)
         with self.assertRaises(TypeError):
             self.assertFalse(function('abc'))
 
@@ -55,56 +55,56 @@ class TestCallablePredicate(unittest.TestCase):
         def always_false(x):  # <- Helper function.
             return False
 
-        function = lambda x: _callable_predicate(always_false, x)
+        function = lambda x: _check_callable(always_false, x)
         self.assertTrue(function(always_false))
 
     def test_identity_with_error(self):
         def fails_internally(x):  # <- Helper function.
             raise TypeError('raising an error')
 
-        function = lambda x: _callable_predicate(fails_internally, x)
+        function = lambda x: _check_callable(fails_internally, x)
         self.assertTrue(function(fails_internally))
 
 
-class TestEllipsisWildcardParts(unittest.TestCase):
+class TestCheckWildcard(unittest.TestCase):
     def test_always_true(self):
-        self.assertTrue(_wildcard_predicate(1))
-        self.assertTrue(_wildcard_predicate(object()))
-        self.assertTrue(_wildcard_predicate(None))
+        self.assertTrue(_check_wildcard(1))
+        self.assertTrue(_check_wildcard(object()))
+        self.assertTrue(_check_wildcard(None))
 
 
-class TestTruthyParts(unittest.TestCase):
+class TestCheckTruthy(unittest.TestCase):
     def test_matches(self):
-        self.assertTrue(_truthy_predicate('x'))
-        self.assertTrue(_truthy_predicate(1.0))
-        self.assertTrue(_truthy_predicate([1]))
-        self.assertTrue(_truthy_predicate(range(1)))
+        self.assertTrue(_check_truthy('x'))
+        self.assertTrue(_check_truthy(1.0))
+        self.assertTrue(_check_truthy([1]))
+        self.assertTrue(_check_truthy(range(1)))
 
     def test_nonmatches(self):
-        self.assertFalse(_truthy_predicate(''))
-        self.assertFalse(_truthy_predicate(0.0))
-        self.assertFalse(_truthy_predicate([]))
-        self.assertFalse(_truthy_predicate(range(0)))
+        self.assertFalse(_check_truthy(''))
+        self.assertFalse(_check_truthy(0.0))
+        self.assertFalse(_check_truthy([]))
+        self.assertFalse(_check_truthy(range(0)))
 
 
-class TestFalsyParts(unittest.TestCase):
+class TestCheckFalsy(unittest.TestCase):
     def test_matches(self):
-        self.assertTrue(_falsy_predicate(''))
-        self.assertTrue(_falsy_predicate(0.0))
-        self.assertTrue(_falsy_predicate([]))
-        self.assertTrue(_falsy_predicate(range(0)))
+        self.assertTrue(_check_falsy(''))
+        self.assertTrue(_check_falsy(0.0))
+        self.assertTrue(_check_falsy([]))
+        self.assertTrue(_check_falsy(range(0)))
 
     def test_nonmatches(self):
-        self.assertFalse(_falsy_predicate('x'))
-        self.assertFalse(_falsy_predicate(1.0))
-        self.assertFalse(_falsy_predicate([1]))
-        self.assertFalse(_falsy_predicate(range(1)))
+        self.assertFalse(_check_falsy('x'))
+        self.assertFalse(_check_falsy(1.0))
+        self.assertFalse(_check_falsy([1]))
+        self.assertFalse(_check_falsy(range(1)))
 
 
-class TestRegexParts(unittest.TestCase):
+class TestCheckRegex(unittest.TestCase):
     def test_function(self):
         regex = re.compile('(Ch|H)ann?ukk?ah?')
-        function = lambda x: _regex_predicate(regex, x)
+        function = lambda x: _check_regex(regex, x)
 
         self.assertTrue(function('Happy Hanukkah'))
         self.assertTrue(function('Happy Chanukah'))
@@ -113,76 +113,76 @@ class TestRegexParts(unittest.TestCase):
     def test_error(self):
         regex = re.compile('abc')
         with self.assertRaisesRegex(TypeError, "got int: 123"):
-            self.assertFalse(_regex_predicate(regex, 123))  # Regex fails with TypeError.
+            self.assertFalse(_check_regex(regex, 123))  # Regex fails with TypeError.
 
         with self.assertRaisesRegex(TypeError, "got tuple: \('a', 'b'\)"):
-            self.assertFalse(_regex_predicate(regex, ('a', 'b')))
+            self.assertFalse(_check_regex(regex, ('a', 'b')))
 
     def test_identity(self):
         regex = re.compile('abc')
-        self.assertTrue(_regex_predicate(regex, regex))
+        self.assertTrue(_check_regex(regex, regex))
 
 
-class TestSetParts(unittest.TestCase):
+class TestCheckSet(unittest.TestCase):
     def test_function(self):
-        function = lambda x: _set_predicate(set(['abc', 'def']), x)
+        function = lambda x: _check_set(set(['abc', 'def']), x)
         self.assertTrue(function('abc'))
         self.assertFalse(function('xyz'))
 
     def test_whole_set_equality(self):
-        function = lambda x: _set_predicate(set(['abc', 'def']), x)
+        function = lambda x: _check_set(set(['abc', 'def']), x)
         self.assertTrue(function(set(['abc', 'def'])))
 
 
 class TestGetMatcherParts(unittest.TestCase):
     def test_type(self):
-        pred_function, repr_string = _get_matcher_parts(int)
-        self.assertTrue(pred_function(1))
-        self.assertFalse(pred_function(1.0))
+        pred_handler, repr_string = _get_matcher_parts(int)
+        self.assertTrue(pred_handler(1))
+        self.assertFalse(pred_handler(1.0))
         self.assertEqual(repr_string, 'int')
 
     def test_callable(self):
         def userfunc(x):
             return x == 1
-        pred_function, repr_string = _get_matcher_parts(userfunc)
-        self.assertTrue(pred_function(1))
-        self.assertFalse(pred_function(2))
+        pred_handler, repr_string = _get_matcher_parts(userfunc)
+        self.assertTrue(pred_handler(1))
+        self.assertFalse(pred_handler(2))
         self.assertEqual(repr_string, 'userfunc')
 
         userlambda = lambda x: x == 1
-        pred_function, repr_string = _get_matcher_parts(userlambda)
-        self.assertTrue(pred_function(1))
-        self.assertFalse(pred_function(2))
+        pred_handler, repr_string = _get_matcher_parts(userlambda)
+        self.assertTrue(pred_handler(1))
+        self.assertFalse(pred_handler(2))
         self.assertEqual(repr_string, '<lambda>')
 
     def test_ellipsis_wildcard(self):
-        pred_function, repr_string = _get_matcher_parts(Ellipsis)
-        self.assertIs(pred_function, _wildcard_predicate)
+        pred_handler, repr_string = _get_matcher_parts(Ellipsis)
+        self.assertIs(pred_handler, _check_wildcard)
         self.assertEqual(repr_string, '...')
 
     def test_truthy(self):
-        pred_function, repr_string = _get_matcher_parts(True)
-        self.assertIs(pred_function, _truthy_predicate)
+        pred_handler, repr_string = _get_matcher_parts(True)
+        self.assertIs(pred_handler, _check_truthy)
         self.assertEqual(repr_string, 'True')
 
     def test_falsy(self):
-        pred_function, repr_string = _get_matcher_parts(False)
-        self.assertIs(pred_function, _falsy_predicate)
+        pred_handler, repr_string = _get_matcher_parts(False)
+        self.assertIs(pred_handler, _check_falsy)
         self.assertEqual(repr_string, 'False')
 
     def test_regex(self):
         regex = re.compile('ab[cd]')
 
-        pred_function, repr_string = _get_matcher_parts(regex)
-        self.assertTrue(pred_function('abc'))
-        self.assertFalse(pred_function('abe'))
+        pred_handler, repr_string = _get_matcher_parts(regex)
+        self.assertTrue(pred_handler('abc'))
+        self.assertFalse(pred_handler('abe'))
         self.assertEqual(repr_string, "re.compile('ab[cd]')")
 
     def test_set(self):
         myset = set(['a'])
-        pred_function, repr_string = _get_matcher_parts(myset)
-        self.assertTrue(pred_function('a'))
-        self.assertFalse(pred_function('b'))
+        pred_handler, repr_string = _get_matcher_parts(myset)
+        self.assertTrue(pred_handler('a'))
+        self.assertFalse(pred_handler('b'))
         self.assertEqual(repr_string, repr(myset))
 
     def test_no_special_handling(self):

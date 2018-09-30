@@ -124,34 +124,34 @@ class MatcherTuple(MatcherBase, tuple):
     pass
 
 
-def _type_predicate(type_, value):
+def _check_type(type_, value):
     """Return true if *value* is an instance of the specified type
     or if *value* is the specified type.
     """
     return value is type_ or isinstance(value, type_)
 
 
-def _callable_predicate(func, value):
+def _check_callable(func, value):
     """Return true if func(value) returns is true."""
     return value is func or func(value)
 
 
-def _wildcard_predicate(value):
+def _check_wildcard(value):
     """Always returns true."""
     return True
 
 
-def _truthy_predicate(value):
+def _check_truthy(value):
     """Return true if *value* is truthy."""
     return bool(value)
 
 
-def _falsy_predicate(value):
+def _check_falsy(value):
     """Return true if *value* is falsy."""
     return not bool(value)
 
 
-def _regex_predicate(regex, value):
+def _check_regex(regex, value):
     """Return true if *value* matches regex."""
     try:
         return regex.search(value) is not None
@@ -168,43 +168,43 @@ def _regex_predicate(regex, value):
         raise exc
 
 
-def _set_predicate(set_, value):
+def _check_set(set_, value):
     """Return true if *value* is a member of the given set or if
     the *value* is equal to the given set."""
     return value in set_ or value == set_
 
 
 def _get_matcher_parts(obj):
-    """Return a 2-tuple containing a function (to use as a predicate)
-    and string (to use for displaying a user-readable value). Return
-    None if *obj* can be matched with the "==" operator and requires
-    no other special handling.
+    """Return a 2-tuple containing a handler function (to check for
+    matches) and a string (to use for displaying a user-readable
+    value). Return None if *obj* can be matched with the "==" operator
+    and requires no other special handling.
     """
     if isinstance(obj, type):
-        pred_function = lambda x: _type_predicate(obj, x)
+        pred_handler = lambda x: _check_type(obj, x)
         repr_string = getattr(obj, '__name__', repr(obj))
     elif callable(obj):
-        pred_function = lambda x: _callable_predicate(obj, x)
+        pred_handler = lambda x: _check_callable(obj, x)
         repr_string = getattr(obj, '__name__', repr(obj))
     elif obj is Ellipsis:
-        pred_function = _wildcard_predicate  # <- Matches everything.
+        pred_handler = _check_wildcard  # <- Matches everything.
         repr_string = '...'
     elif obj is True:
-        pred_function = _truthy_predicate
+        pred_handler = _check_truthy
         repr_string = 'True'
     elif obj is False:
-        pred_function = _falsy_predicate
+        pred_handler = _check_falsy
         repr_string = 'False'
     elif isinstance(obj, regex_types):
-        pred_function = lambda x: _regex_predicate(obj, x)
+        pred_handler = lambda x: _check_regex(obj, x)
         repr_string = 're.compile({0!r})'.format(obj.pattern)
     elif isinstance(obj, set):
-        pred_function = lambda x: _set_predicate(obj, x)
+        pred_handler = lambda x: _check_set(obj, x)
         repr_string = repr(obj)
     else:
         return None
 
-    return pred_function, repr_string
+    return pred_handler, repr_string
 
 
 def _get_matcher_or_original(obj):
@@ -238,19 +238,19 @@ class Predicate(object):
     """
     def __init__(self, obj):
         matcher = get_matcher(obj)
-        self._pred_function = matcher.__eq__
+        self._pred_handler = matcher.__eq__
         self._repr_string = repr(matcher)
         self._inverted = False
 
     def __call__(self, other):
-        result = self._pred_function(other)
+        result = self._pred_handler(other)
         if self._inverted:
             return not result
         return result
 
     def __invert__(self):
         new_pred = self.__class__.__new__(self.__class__)
-        new_pred._pred_function = self._pred_function
+        new_pred._pred_handler = self._pred_handler
         new_pred._repr_string = self._repr_string
         new_pred._inverted = not self._inverted
         return new_pred
