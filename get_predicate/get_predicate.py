@@ -125,34 +125,34 @@ class MatcherTuple(MatcherBase, tuple):
 
 
 def _type_predicate(type_, value):
-    """Predicate function that returns True if value is of specified
-    type.
+    """Return true if *value* is an instance of the specified type
+    or if *value* is the specified type.
     """
     return value is type_ or isinstance(value, type_)
 
 
 def _callable_predicate(func, value):
-    """Predicate function that returns True if func(value) is true."""
+    """Return true if func(value) returns is true."""
     return value is func or func(value)
 
 
 def _wildcard_predicate(value):
-    """Predicate function that always returns True."""
+    """Always returns true."""
     return True
 
 
 def _truthy_predicate(value):
-    """Predicate function that returns True if value is truthy."""
+    """Return true if *value* is truthy."""
     return bool(value)
 
 
 def _falsy_predicate(value):
-    """Predicate function that returns True if value is falsy."""
+    """Return true if *value* is falsy."""
     return not bool(value)
 
 
 def _regex_predicate(regex, value):
-    """Predicate function that returns True if value matches regex."""
+    """Return true if *value* matches regex."""
     try:
         return regex.search(value) is not None
     except TypeError:
@@ -169,7 +169,8 @@ def _regex_predicate(regex, value):
 
 
 def _set_predicate(set_, value):
-    """Predicate function that returns True if func(value) is true."""
+    """Return true if *value* is a member of the given set or if
+    the *value* is equal to the given set."""
     return value in set_ or value == set_
 
 
