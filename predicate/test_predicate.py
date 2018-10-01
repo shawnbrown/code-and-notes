@@ -6,7 +6,7 @@ import re
 from predicate import (
     _check_type,
     _check_callable,
-    _check_wildcard
+    _check_wildcard,
     _check_truthy,
     _check_falsy,
     _check_regex,
