@@ -3,19 +3,21 @@
 import unittest
 import re
 
-from predicate import _check_type
-from predicate import _check_callable
-from predicate import _check_wildcard
-from predicate import _check_truthy
-from predicate import _check_falsy
-from predicate import _check_regex
-from predicate import _check_set
-from predicate import _get_matcher_parts
-from predicate import get_matcher
-from predicate import MatcherBase
-from predicate import MatcherObject
-from predicate import MatcherTuple
-from predicate import Predicate
+from predicate import (
+    _check_type,
+    _check_callable,
+    _check_wildcard
+    _check_truthy,
+    _check_falsy,
+    _check_regex,
+    _check_set,
+    _get_matcher_parts,
+    get_matcher,
+    MatcherBase,
+    MatcherObject,
+    MatcherTuple,
+    Predicate,
+)
 
 
 class TestCheckType(unittest.TestCase):
