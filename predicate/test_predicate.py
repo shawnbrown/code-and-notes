@@ -3,6 +3,14 @@
 import unittest
 import re
 
+
+try:
+    unittest.TestCase.assertRaisesRegex  # Renamed in Python 3
+except AttributeError:
+    unittest.TestCase.assertRaisesRegex = \
+        unittest.TestCase.assertRaisesRegexp  # New in Python 2.7
+
+
 from predicate import (
     _check_type,
     _check_callable,
