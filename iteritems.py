@@ -81,6 +81,22 @@ if __name__ == '__main__':
             self.assertEqual(set(items), set([('a', 1), ('b', 2)]))
             self.assertEqual(set(items), set([('a', 1), ('b', 2)]), msg='not exhaustible')
 
+        def test_dictitems(self):
+            dic = {'a': 1}
+
+            if hasattr(dic, 'iteritems'):  # <- Python 2
+                dic_items = dic.iteritems()
+
+                items = IterItems(dic_items)
+                self.assertEqual(list(items), [('a', 1)])
+                self.assertEqual(list(items), [], msg='already exhausted')
+
+            dic_items = dic.items()
+
+            items = IterItems(dic_items)
+            self.assertEqual(list(items), [('a', 1)])
+            self.assertEqual(list(items), [('a', 1)], msg='not exhaustible')
+
         def test_empty_iterable(self):
             empty = iter([])
 
