@@ -82,7 +82,9 @@ if __name__ == '__main__':
             self.assertEqual(set(items), set([('a', 1), ('b', 2)]), msg='not exhaustible')
 
         def test_empty_iterable(self):
-            items = IterItems(iter([]))
+            empty = iter([])
+
+            items = IterItems(empty)
             self.assertEqual(list(items), [])
 
         def test_repr(self):
