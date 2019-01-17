@@ -8,11 +8,11 @@ except ImportError:
 
 try:
     from collections.abc import ItemsView
-    from collections.abc import Iterator
+    from collections.abc import Iterable
     from collections.abc import Mapping
 except ImportError:
     from collections import ItemsView
-    from collections import Iterator
+    from collections import Iterable
     from collections import Mapping
 
 
@@ -35,6 +35,10 @@ class IterItems(ABC):
     """
     def __init__(self, items_or_mapping):
         """Initialize self."""
+        if not isinstance(items_or_mapping, (Iterable, Mapping)):
+            msg = 'expected iterable or mapping, got {0!r}'
+            raise TypeError(msg.format(items_or_mapping.__class__.__name__))
+
         while isinstance(items_or_mapping, IterItems) \
                 and hasattr(items_or_mapping, '__wrapped__'):
             items_or_mapping = items_or_mapping.__wrapped__
@@ -68,6 +72,11 @@ if __name__ == '__main__':
 
 
     class TestIterItems(unittest.TestCase):
+        def test_type_error(self):
+            regex = "expected iterable or mapping, got 'int'"
+            with self.assertRaisesRegex(TypeError, regex):
+                IterItems(123)
+
         def test_non_exhaustible(self):
             items_list = [('a', 1), ('b', 2)]  # <- Non-exhaustible iterable.
 
