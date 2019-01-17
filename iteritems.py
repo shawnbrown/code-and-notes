@@ -20,26 +20,36 @@ _iteritems_type = type(getattr(dict(), 'iteritems', dict().items)())
 
 
 class IterItems(ABC):
-    """A wrapper class to identify iterables that are appropriate for
-    constructing a dictionary or other mapping.
-    """
-    def __init__(self, iterable):
-        """Initialize self."""
-        while isinstance(iterable, IterItems) \
-                and hasattr(iterable, '__wrapped__'):
-            iterable = iterable.__wrapped__
+    """A wrapper class to identify objects containing data appropriate
+    for constructing a dictionary or other mapping. The given
+    *items_or_mapping* should be an iterable of key/value pairs or a
+    mapping. When iterated over, :class:`IterItems` will return an
+    iterator of key/value pairs.
 
-        self.__wrapped__ = iterable
+    .. warning::
+
+        :class:`IterItems` does no type checking or verification of
+        the iterable's contents. When iterated over, it should yield
+        only those values necessary for constructing a :py:class:`dict`
+        or other mapping and no more---no duplicate or unhashable keys.
+    """
+    def __init__(self, items_or_mapping):
+        """Initialize self."""
+        while isinstance(items_or_mapping, IterItems) \
+                and hasattr(items_or_mapping, '__wrapped__'):
+            items_or_mapping = items_or_mapping.__wrapped__
+
+        self.__wrapped__ = items_or_mapping
 
     def __iter__(self):
-        iterable = self.__wrapped__
+        wrapped = self.__wrapped__
 
-        if not isinstance(iterable, Mapping):
-            return iter(iterable)
+        if not isinstance(wrapped, Mapping):
+            return iter(wrapped)
 
-        if hasattr(iterable, 'iteritems'):
-            return iterable.iteritems()
-        return iter(iterable.items())
+        if hasattr(wrapped, 'iteritems'):
+            return wrapped.iteritems()
+        return iter(wrapped.items())
 
     def __repr__(self):
         cls_name = self.__class__.__name__
