@@ -135,16 +135,4 @@ if __name__ == '__main__':
             self.assertIsInstance(items, IterItems)
 
 
-    class TestVerifiedItems(unittest.TestCase):
-        @unittest.skip('verified_items() not implemented')
-        def test_invalid_input(self):
-            source = ['x', 1, 'y', 2]
-            with self.assertRaises(TypeError):
-                normalized = verified_items(source)
-
-            source = [{'x': 1}, {'y': 2}]
-            with self.assertRaises(TypeError):
-                normalized = verified_items(source)
-
-
     unittest.main()
