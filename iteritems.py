@@ -44,13 +44,11 @@ class IterItems(ABC):
 
     def __iter__(self):
         wrapped = self.__wrapped__
-
-        if not isinstance(wrapped, Mapping):
-            return iter(wrapped)
-
-        if hasattr(wrapped, 'iteritems'):
-            return wrapped.iteritems()
-        return iter(wrapped.items())
+        if isinstance(wrapped, Mapping):
+            if hasattr(wrapped, 'iteritems'):
+                return wrapped.iteritems()
+            return iter(wrapped.items())
+        return iter(wrapped)
 
     def __repr__(self):
         cls_name = self.__class__.__name__
