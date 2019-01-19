@@ -68,10 +68,16 @@ class IterItems(ABC):
 
 
 if __name__ == '__main__':
-    import unittest
+    from unittest import main
+    from unittest import TestCase
+
+    try:
+        TestCase.assertRaisesRegex
+    except AttributeError:
+        TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
 
 
-    class TestIterItems(unittest.TestCase):
+    class TestIterItems(TestCase):
         def test_type_error(self):
             regex = "expected iterable or mapping, got 'int'"
             with self.assertRaisesRegex(TypeError, regex):
@@ -144,4 +150,4 @@ if __name__ == '__main__':
             self.assertIsInstance(items, IterItems)
 
 
-    unittest.main()
+    main()
