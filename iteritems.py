@@ -147,5 +147,14 @@ if __name__ == '__main__':
                 items = dict([]).items()  # <- For Python 3
             self.assertIsInstance(items, IterItems)
 
+        def test_virtual_subclass(self):
+            class OtherClass(object):
+                pass
+
+            oth_cls = OtherClass()
+
+            IterItems.register(OtherClass)  # <- Register virtual subclass.
+            self.assertIsInstance(oth_cls, IterItems)
+
 
     main()
