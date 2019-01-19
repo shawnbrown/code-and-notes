@@ -16,9 +16,6 @@ except ImportError:
     from collections import Mapping
 
 
-_iteritems_type = type(getattr(dict(), 'iteritems', dict().items)())
-
-
 class IterItems(ABC):
     """A wrapper class to identify objects containing data appropriate
     for constructing a dictionary or other mapping. The given
@@ -59,10 +56,13 @@ class IterItems(ABC):
         cls_name = self.__class__.__name__
         return '{0}({1!r})'.format(cls_name, self.__wrapped__)
 
+    # Set iteritems type as a class attribute.
+    _iteritems_type = type(getattr(dict(), 'iteritems', dict().items)())
+
     @classmethod
     def __subclasshook__(cls, C):
         if cls is IterItems:
-            if issubclass(C, (ItemsView, _iteritems_type)):
+            if issubclass(C, (ItemsView, cls._iteritems_type)):
                 return True
         return NotImplemented
 
