@@ -205,7 +205,7 @@ class Predicate(object):
     Example matches:
 
     +---------------------------+----------------+---------+
-    | Predicate Object          | Value          | Matches |
+    | *obj* example             | value          | matches |
     +===========================+================+=========+
     | .. code-block:: python    | ``'A'``        | Yes     |
     |                           +----------------+---------+
