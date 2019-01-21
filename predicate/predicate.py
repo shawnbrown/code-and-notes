@@ -168,10 +168,9 @@ def get_matcher(obj):
 
 class Predicate(object):
     """A Predicate is used like a function of one argument that
-    returns True when applied to a matching argument and False
-    when applied to a non-matching argument. The criteria used
-    for matching is determined by the *obj* used to define the
-    predicate:
+    returns ``True`` when applied to a matching value and ``False``
+    when applied to a non-matching value. The criteria for matching
+    is determined by the *obj* type used to define the predicate:
 
     +-------------------------+-----------------------------------+
     | *obj* type              | matches when                      |
@@ -206,7 +205,7 @@ class Predicate(object):
     Example matches:
 
     +---------------------------+----------------+---------+
-    | Example Predicate Objects | Example Value  | Matches |
+    | Predicate Object          | Value          | Matches |
     +===========================+================+=========+
     | .. code-block:: python    | ``'A'``        | Yes     |
     |                           +----------------+---------+
@@ -255,9 +254,9 @@ class Predicate(object):
         False
 
     Predicate matching behavior can also be inverted with the inversion
-    operator ("``~``"). Inverted Predicates return False when applied
-    to a matching argument and True when applied to a non-matching
-    argument::
+    operator (``~``). Inverted Predicates return ``False`` when applied
+    to a matching value and ``True`` when applied to a non-matching
+    value::
 
         >>> pred = ~Predicate({'A', 'B'})
         >>> pred('A')
