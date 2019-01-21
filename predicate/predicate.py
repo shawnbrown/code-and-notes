@@ -1,79 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Predicate objects are used to check that values satisfy a certain
-criteria. The specific behavior of a predicate depends on its type:
-
-    +----------------------+------------------------------------------+
-    | Predicate type       | Checks that                              |
-    +======================+==========================================+
-    | set                  | value is a member of the set             |
-    +----------------------+------------------------------------------+
-    | function             | calling ``function(value)`` returns True |
-    +----------------------+------------------------------------------+
-    | type                 | value is an instance of the type         |
-    +----------------------+------------------------------------------+
-    | re.compile(pattern)  | value matches the regular expression     |
-    +----------------------+------------------------------------------+
-    | str or non-container | value equals predicate                   |
-    +----------------------+------------------------------------------+
-    | tuple of             | tuple of values satisfies corresponding  |
-    | predicates           | tuple of predicates                      |
-    +----------------------+------------------------------------------+
-    | True                 | value is truthy (truth value is True)    |
-    +----------------------+------------------------------------------+
-    | False                | value is falsy (truth value is False)    |
-    +----------------------+------------------------------------------+
-    | "``...``" (an        | (used as a wildcard, matches any value)  |
-    | ellipsis)            |                                          |
-    +----------------------+------------------------------------------+
-
-
-Some Examples:
-
-    +---------------------------+----------------+---------+
-    | Example Predicate         | Example Value  | Matches |
-    +===========================+================+=========+
-    | .. code-block:: python    | ``'A'``        | Yes     |
-    |                           +----------------+---------+
-    |     {'A', 'B'}            | ``'C'``        | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``4``          | Yes     |
-    |                           +----------------+---------+
-    |     def iseven(x):        | ``9``          | No      |
-    |         return x % 2 == 0 |                |         |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``1.0``        | Yes     |
-    |                           +----------------+---------+
-    |     float                 | ``1``          | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``'bake'``     | Yes     |
-    |                           +----------------+---------+
-    |     re.compile('[bc]ake') | ``'cake'``     | Yes     |
-    |                           +----------------+---------+
-    |                           | ``'fake'``     | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``'foo'``      | Yes     |
-    |                           +----------------+---------+
-    |     'foo'                 | ``'bar'``      | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``'x'``        | Yes     |
-    |                           +----------------+---------+
-    |     True                  | ``''``         | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``''``         | Yes     |
-    |                           +----------------+---------+
-    |     False                 | ``'x'``        | No      |
-    +---------------------------+----------------+---------+
-    | .. code-block:: python    | ``('A', 'X')`` | Yes     |
-    |                           +----------------+---------+
-    |     ('A', ...)            | ``('A', 'Y')`` | Yes     |
-    |                           +----------------+---------+
-    | Uses ellipsis wildcard.   | ``('B', 'X')`` | No      |
-    +---------------------------+----------------+---------+
-
-"""
-
 import abc
 import re
 
@@ -241,8 +167,103 @@ def get_matcher(obj):
 
 
 class Predicate(object):
-    """Returns a callable object that can be used as a functional
-    predicate.
+    """A Predicate is used like a function of one argument that
+    returns True when applied to a matching argument and False
+    when applied to a non-matching argument. The criteria used
+    for matching is determined by the *obj* used to define the
+    predicate:
+
+    +-------------------------+-----------------------------------+
+    | *obj* type              | matches when                      |
+    +=========================+===================================+
+    | set                     | value is a member of the set      |
+    +-------------------------+-----------------------------------+
+    | function                | the result of ``function(value)`` |
+    |                         | tests as True                     |
+    +-------------------------+-----------------------------------+
+    | type                    | value is an instance of the type  |
+    +-------------------------+-----------------------------------+
+    | ``re.compile(pattern)`` | value matches the regular         |
+    |                         | expression pattern                |
+    +-------------------------+-----------------------------------+
+    | str or non-container    | value is equal to the object      |
+    +-------------------------+-----------------------------------+
+    | tuple of predicates     | tuple of values satisfies         |
+    |                         | corresponding tuple of            |
+    |                         | predicates---each according       |
+    |                         | to their type                     |
+    +-------------------------+-----------------------------------+
+    | ``True``                | ``bool(value)`` returns True      |
+    |                         | (value is truthy)                 |
+    +-------------------------+-----------------------------------+
+    | ``False``               | ``bool(value)`` returns False     |
+    |                         | (value is falsy)                  |
+    +-------------------------+-----------------------------------+
+    | ``...`` (Ellipsis       | (used as a wildcard, matches      |
+    | literal)                | any value)                        |
+    +-------------------------+-----------------------------------+
+
+    Example matches:
+
+    +---------------------------+----------------+---------+
+    | Example Predicate Objects | Example Value  | Matches |
+    +===========================+================+=========+
+    | .. code-block:: python    | ``'A'``        | Yes     |
+    |                           +----------------+---------+
+    |     {'A', 'B'}            | ``'C'``        | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``4``          | Yes     |
+    |                           +----------------+---------+
+    |     def iseven(x):        | ``9``          | No      |
+    |         return x % 2 == 0 |                |         |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``1.0``        | Yes     |
+    |                           +----------------+---------+
+    |     float                 | ``1``          | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'bake'``     | Yes     |
+    |                           +----------------+---------+
+    |     re.compile('[bc]ake') | ``'cake'``     | Yes     |
+    |                           +----------------+---------+
+    |                           | ``'fake'``     | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'foo'``      | Yes     |
+    |                           +----------------+---------+
+    |     'foo'                 | ``'bar'``      | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``'x'``        | Yes     |
+    |                           +----------------+---------+
+    |     True                  | ``''``         | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``''``         | Yes     |
+    |                           +----------------+---------+
+    |     False                 | ``'x'``        | No      |
+    +---------------------------+----------------+---------+
+    | .. code-block:: python    | ``('A', 'X')`` | Yes     |
+    |                           +----------------+---------+
+    |     ('A', ...)            | ``('A', 'Y')`` | Yes     |
+    |                           +----------------+---------+
+    | Uses ellipsis wildcard.   | ``('B', 'X')`` | No      |
+    +---------------------------+----------------+---------+
+
+    Example code::
+
+        >>> pred = Predicate({'A', 'B'})
+        >>> pred('A')
+        True
+        >>> pred('C')
+        False
+
+    Predicate matching behavior can also be inverted with the inversion
+    operator ("``~``"). Inverted Predicates return False when applied
+    to a matching argument and True when applied to a non-matching
+    argument::
+
+        >>> pred = ~Predicate({'A', 'B'})
+        >>> pred('A')
+        False
+        >>> pred('C')
+        True
     """
     def __init__(self, obj):
         if isinstance(obj, Predicate):
