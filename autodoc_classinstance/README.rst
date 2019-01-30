@@ -42,7 +42,7 @@ Installation
 
 2. Copy the **autodoc_classinstance.py** file into the **_ext** folder.
 
-   Your folder directory structure could look like the following::
+   Your folder directory structure could look like the following:
 
    .. code-block:: none
 
