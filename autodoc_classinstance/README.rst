@@ -54,23 +54,25 @@ Installation
          └── otherfile.rst
 
 3. Add the following lines to your **conf.py** file after the extensions list
-   definition::
+   definition:
 
-     # -- Configure custom extension: autodoc_classinstance --------------------
-     if 'sphinx.ext.autodoc' in extensions:
+   .. code-block:: python
 
-         # Add custom extension directory ("_ext") to sys.path.
-         dirname = os.path.abspath(os.path.dirname(globals().get('__file__', '.')))
-         sys.path.insert(0, os.path.join(dirname, '_ext'))
+       # -- Configure custom extension: autodoc_classinstance --------------------
+       if 'sphinx.ext.autodoc' in extensions:
 
-         # Add to list of extensions (must appear after autodoc in list).
-         extensions.append('autodoc_classinstance')
+           # Add custom extension directory ("_ext") to sys.path.
+           dirname = os.path.abspath(os.path.dirname(globals().get('__file__', '.')))
+           sys.path.insert(0, os.path.join(dirname, '_ext'))
 
-         # Suppress the warning given when the extension overrides the
-         # registered "automethod" directive 
-         suppress_warnings = [
-             'app.add_directive',
-         ]
+           # Add to list of extensions (must appear after autodoc in list).
+           extensions.append('autodoc_classinstance')
+
+           # Suppress the warning given when the extension overrides the
+           # registered "automethod" directive.
+           suppress_warnings = [
+               'app.add_directive',
+           ]
 
 
 ..
