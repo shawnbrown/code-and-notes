@@ -44,6 +44,8 @@ Installation
 
    Your folder directory structure could look like the following::
 
+   .. code-block:: none
+
      └── source
          ├── _ext
          │   └── autodoc_classinstance.py
