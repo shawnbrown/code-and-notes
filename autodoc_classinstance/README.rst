@@ -45,7 +45,6 @@ Installation
    Your folder directory structure could look like the following:
 
    .. code-block:: none
-     :emphasize-lines: 2-3
 
      └── source
          ├── _ext
