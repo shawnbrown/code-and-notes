@@ -60,7 +60,7 @@ class IterItems(ABC):
     @classmethod
     def __subclasshook__(cls, C):
         if cls is IterItems:
-            if issubclass(C, (ItemsView, cls._iteritems_type)):
+            if issubclass(C, (ItemsView, cls._iteritems_type, enumerate)):
                 return True
         return NotImplemented
 
@@ -145,6 +145,9 @@ if __name__ == '__main__':
                 items = dict([]).iteritems()  # <- For Python 2
             except AttributeError:
                 items = dict([]).items()  # <- For Python 3
+            self.assertIsInstance(items, IterItems)
+
+            items = enumerate([])
             self.assertIsInstance(items, IterItems)
 
         def test_virtual_subclass(self):
