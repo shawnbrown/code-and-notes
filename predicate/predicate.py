@@ -272,8 +272,22 @@ class Predicate(object):
         >>> pred('C')
         True
 
-    If *name* is provided, it is used to set the object's ``__name__``
-    attribute.
+    If the *name* argument is given, a ``__name__`` attribute is
+    defined using the given value::
+
+        >>> pred = Predicate({'A', 'B'}, name='a_or_b')
+        >>> pred.__name__
+        'a_or_b'
+
+    If the *name* argument is omitted, the object will not have a
+    ``__name__`` attribute::
+
+        >>> pred = Predicate({'A', 'B'})
+        >>> pred.__name__
+        Traceback (most recent call last):
+          File "<input>", line 1, in <module>
+            pred.__name__
+        AttributeError: 'Predicate' object has no attribute '__name__'
     """
     def __init__(self, obj, name=None):
         if isinstance(obj, Predicate):
