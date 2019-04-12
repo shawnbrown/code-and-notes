@@ -315,9 +315,16 @@ class Predicate(object):
         return new_pred
 
     def __repr__(self):
-        cls_name = self.__class__.__name__
         inverted = '~' if self._inverted else ''
-        return '{0}{1}({2})'.format(inverted, cls_name, repr(self.matcher))
+        class_name = self.__class__.__name__
+        instance_name = getattr(self, '__name__', None)
+        if instance_name is not None:
+            name_arg = ', name={0!r}'.format(instance_name)
+        else:
+            name_arg = ''
+
+        return '{0}{1}({2!r}{3})'.format(
+            inverted, class_name, self.matcher, name_arg)
 
     def __str__(self):
         inverted = 'not ' if self._inverted else ''
