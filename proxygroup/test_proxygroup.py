@@ -3,10 +3,16 @@
 import unittest
 
 try:
+    from collections.abc import Iterator
+except ImportError:
+    from collections import Iterator
+
+try:
     import pandas
 except ImportError:
     pandas = None
 
+from iteritems import IterItems
 from proxygroup import ProxyGroup
 from proxygroup import ProxyGroupBase
 
@@ -32,10 +38,13 @@ class TestProxyGroup(unittest.TestCase):
 
     def test_iter_sequence(self):
         group = ProxyGroup([1, 2, 3])
+        self.assertIsInstance(iter(group), Iterator)
+        self.assertNotIsInstance(iter(group), IterItems)
         self.assertEqual(list(group), [1, 2, 3])
 
     def test_iter_mapping(self):
         group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
+        self.assertIsInstance(iter(group), IterItems)
         self.assertEqual(set(group), set([('a', 1), ('b', 2), ('c', 3)]))
 
     def test_repr(self):

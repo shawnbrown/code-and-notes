@@ -3,6 +3,7 @@
 import operator
 from functools import partial
 from itertools import chain
+from iteritems import IterItems
 
 try:
     from collections.abc import Iterable
@@ -151,7 +152,7 @@ class ProxyGroup(ProxyGroupBase):
 
     def __iter__(self):
         if self._keys:
-            return iter(zip(self._keys, self._objs))
+            return IterItems(zip(self._keys, self._objs))
         return iter(self._objs)
 
     def __repr__(self):
