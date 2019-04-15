@@ -92,34 +92,34 @@ class TestRepeatingContainer(unittest.TestCase):
         self.assertIsInstance(group, RepeatingContainer)
         self.assertEqual(group._objs, (123, 123))
 
-    def test_compatible_group(self):
+    def test_compatible_container(self):
         # Test RepeatingContainer of list items.
         group = RepeatingContainer([2, 4])
         self.assertTrue(
-            group._compatible_group(RepeatingContainer([5, 6])),
+            group._compatible_container(RepeatingContainer([5, 6])),
             msg='is RepeatingContainer and _objs length matches',
         )
         self.assertFalse(
-            group._compatible_group(1),
+            group._compatible_container(1),
             msg='non-RepeatingContainer values are never compatible',
         )
         self.assertFalse(
-            group._compatible_group(RepeatingContainer([5, 6, 7])),
+            group._compatible_container(RepeatingContainer([5, 6, 7])),
             msg='not compatible when _objs length does not match',
         )
         self.assertFalse(
-            group._compatible_group(RepeatingContainer({'foo': 5, 'bar': 6})),
+            group._compatible_container(RepeatingContainer({'foo': 5, 'bar': 6})),
             msg='not compatible if keys are given but original has no keys',
         )
 
         # Test RepeatingContainer of dict items.
         group = RepeatingContainer({'foo': 2, 'bar': 4})
         self.assertTrue(
-            group._compatible_group(RepeatingContainer({'foo': 5, 'bar': 6})),
+            group._compatible_container(RepeatingContainer({'foo': 5, 'bar': 6})),
             msg='is RepeatingContainer and _keys match',
         )
         self.assertFalse(
-            group._compatible_group(RepeatingContainer({'qux': 5, 'quux': 6})),
+            group._compatible_container(RepeatingContainer({'qux': 5, 'quux': 6})),
             msg='not compatible if keys do not match',
         )
 

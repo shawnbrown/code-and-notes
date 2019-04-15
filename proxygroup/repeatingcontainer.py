@@ -193,11 +193,11 @@ class RepeatingContainer(RepeatingContainerBase):
         return '{0}({1}{2}{3})'.format(cls_name, begin, internal_repr, end)
 
     def __getattr__(self, name):
-        group = self.__class__(getattr(obj, name) for obj in self._objs)
-        group._keys = self._keys
-        return group
+        repeating = self.__class__(getattr(obj, name) for obj in self._objs)
+        repeating._keys = self._keys
+        return repeating
 
-    def _compatible_group(self, value):
+    def _compatible_container(self, value):
         """Returns True if *value* is a RepeatingContainer with
         compatible contents.
         """
@@ -227,7 +227,7 @@ class RepeatingContainer(RepeatingContainerBase):
             >>> repeating._normalize_value(9)
             (9, 9)
         """
-        if self._compatible_group(value):
+        if self._compatible_container(value):
             if value._keys:
                 key_order = (self._keys.index(x) for x in value._keys)
                 _, objs = zip(*sorted(zip(key_order, value._objs)))
@@ -265,7 +265,7 @@ class RepeatingContainer(RepeatingContainerBase):
         return list(zip(zipped_args, zipped_kwds))
 
     def __call__(self, *args, **kwds):
-        if any(self._compatible_group(x) for x in chain(args, kwds.values())):
+        if any(self._compatible_container(x) for x in chain(args, kwds.values())):
             # Call each object using args and kwds from the expanded list.
             expanded_list = self._expand_args_kwds(*args, **kwds)
             zipped = zip(self._objs, expanded_list)
@@ -274,12 +274,12 @@ class RepeatingContainer(RepeatingContainerBase):
             # Call each object with the same args and kwds.
             iterable = (obj(*args, **kwds) for obj in self._objs)
 
-        group = self.__class__(iterable)
-        group._keys = self._keys
-        return group
+        repeating = self.__class__(iterable)
+        repeating._keys = self._keys
+        return repeating
 
 
-def _setup_RepeatingContainer_special_names(proxy_class):
+def _setup_RepeatingContainer_special_names(repeating_class):
     """This function is run when the module is imported--users should
     not call this function directly. It assigns magic methods and
     special attribute names to the RepeatingContainer class.
@@ -294,35 +294,36 @@ def _setup_RepeatingContainer_special_names(proxy_class):
         lshift rshift and xor or div
     """.split()
 
-    def proxy_getattr(self, name):
-        group = self.__class__(getattr(obj, name) for obj in self._objs)
-        group._keys = self._keys
-        return group
+    def repeating_getattr(self, name):
+        repeating = self.__class__(getattr(obj, name) for obj in self._objs)
+        repeating._keys = self._keys
+        return repeating
 
     for name in special_names:
         dunder = '__{0}__'.format(name)
-        method = partial(proxy_getattr, name=dunder)
-        setattr(proxy_class, dunder, property(method))
+        method = partial(repeating_getattr, name=dunder)
+        setattr(repeating_class, dunder, property(method))
 
     # When a reflected method is called on a RepeatingContainer itself, the
     # original (unreflected) operation is re-applied to the individual objects
-    # contained in the group. If these new calls are also reflected, they will
-    # act on the individual objects--rather than on the group as a whole.
+    # contained in the container. If these new calls are also reflected, they
+    # will act on the individual objects--rather than on the container as a
+    # whole.
     reflected_special_names = """
         radd rsub rmul rmatmul rtruediv rfloordiv rmod rpow
         rlshift rrshift rand rxor ror rdiv
     """.split()
 
-    def proxy_reflected_method(self, other, name):
+    def repeating_reflected_method(self, other, name):
         unreflected_op = name[1:]  # Slice-off 'r' prefix.
         operation = getattr(operator, unreflected_op)
-        group = self.__class__(operation(other, obj) for obj in self._objs)
-        group._keys = self._keys
-        return group
+        repeating = self.__class__(operation(other, obj) for obj in self._objs)
+        repeating._keys = self._keys
+        return repeating
 
     for name in reflected_special_names:
         dunder = '__{0}__'.format(name)
-        method = partialmethod(proxy_reflected_method, name=name)
-        setattr(proxy_class, dunder, method)
+        method = partialmethod(repeating_reflected_method, name=name)
+        setattr(repeating_class, dunder, method)
 
 _setup_RepeatingContainer_special_names(RepeatingContainer)
