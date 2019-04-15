@@ -13,7 +13,7 @@ except ImportError:
     pandas = None
 
 from iteritems import IterItems
-from proxygroup import RepeatingContainer
+from repeatingcontainer import RepeatingContainer
 
 
 class TestRepeatingContainer(unittest.TestCase):
