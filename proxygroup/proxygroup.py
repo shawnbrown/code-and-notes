@@ -95,10 +95,9 @@ class ProxyGroupBase(Iterable):
 
 
 class ProxyGroup(ProxyGroupBase):
-    """A class to wrap a sequence or mapping of objects and operate on
-    them at the same time. Method calls and property references made on
-    the group are forwarded to the values inside and a new ProxyGroup
-    is returned with the results.
+    """A container that repeats attribute lookups, method calls,
+    operations, and expressions on the objects it contains. The
+    resulting objects are returned in a new ProxyGroup.
 
     In the following example, a ProxyGroup with two strings is created.
     A method call to ``upper()`` is forwarded to the individual strings
