@@ -146,6 +146,8 @@ class ProxyGroup(ProxyGroupBase):
         if isinstance(iterable, Mapping):
             self._keys = tuple(iterable.keys())
             self._objs = tuple(iterable.values())
+        elif isinstance(iterable, IterItems):
+            self._keys, self._objs = zip(*iterable)
         else:
             self._keys = tuple()
             self._objs = tuple(iterable)

@@ -25,9 +25,16 @@ class TestProxyGroup(unittest.TestCase):
 
     def test_init_mapping(self):
         data = {'a': 1, 'b': 2, 'c': 3}
-        group = ProxyGroup({'a': 1, 'b': 2, 'c': 3})
+        group = ProxyGroup(data)
         self.assertEqual(group._keys, tuple(data.keys()))
         self.assertEqual(group._objs, tuple(data.values()))
+
+    def test_init_iteritems(self):
+        keys = ('a', 'b', 'c')
+        values = (1, 2, 3)
+        group = ProxyGroup(IterItems(zip(keys, values)))
+        self.assertEqual(group._keys, keys)
+        self.assertEqual(group._objs, values)
 
     def test_init_exceptions(self):
         with self.assertRaises(TypeError):
