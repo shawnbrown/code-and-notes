@@ -75,63 +75,66 @@ except ImportError:
             return getattr(self.func, "__isabstractmethod__", False)
 
 
-class ProxyGroupBase(Iterable):
+class RepeatingContainerBase(Iterable):
     """A base class to provide magic methods that operate directly on
-    the ProxyGroup itself---rather than on the objects it contains.
+    the RepeatingContainer itself---rather than on the objects it
+    contains.
 
     These methods must be accessed using super()::
 
-        >>> group1 = ProxyGroup(['foo', 'bar'])
-        >>> group2 = ProxyGroup(['foo', 'bar'])
-        >>> super(ProxyGroup, group1).__eq__(group2)
+        >>> repeating1 = RepeatingContainer(['foo', 'bar'])
+        >>> repeating2 = RepeatingContainer(['foo', 'bar'])
+        >>> super(RepeatingContainer, repeating1).__eq__(repeating2)
         True
     """
     def __eq__(self, other):
-        return (isinstance(other, ProxyGroup)
+        return (isinstance(other, RepeatingContainer)
                 and self._objs == other._objs
                 and self._keys == other._keys)
 
     def __ne__(self, other):
-        return not super(ProxyGroup, self).__eq__(other)
+        return not super(RepeatingContainer, self).__eq__(other)
 
 
-class ProxyGroup(ProxyGroupBase):
+class RepeatingContainer(RepeatingContainerBase):
     """A container that repeats attribute lookups, method calls,
-    operations, and expressions on the objects it contains. The
-    resulting objects are returned in a new ProxyGroup.
+    operations, and expressions on the objects it contains. When
+    an action is performed, it is forwarded to each object in the
+    container and a new RepeatingContainer is returned with the
+    resulting values.
 
-    In the following example, a ProxyGroup with two strings is created.
-    A method call to ``upper()`` is forwarded to the individual strings
-    and a new ProxyGroup is returned that contains the uppercase
-    values::
+    In the following example, a RepeatingContainer with two strings
+    is created. A method call to ``upper()`` is forwarded to the
+    individual strings and a new RepeatingContainer is returned that
+    contains the uppercase values::
 
-        >>> group = ProxyGroup(['foo', 'bar'])
-        >>> group.upper()
-        ProxyGroup(['FOO', 'BAR'])
+        >>> repeating = RepeatingContainer(['foo', 'bar'])
+        >>> repeating.upper()
+        RepeatingContainer(['FOO', 'BAR'])
 
-    A ProxyGroup is an iterable and its individual items can be
-    accessed through sequence unpacking or iteration. Below, the
+    A RepeatingContainer is an iterable and its individual items can
+    be accessed through sequence unpacking or iteration. Below, the
     individual objects are unpacked into the variables ``x`` and
     ``y``::
 
-        >>> group = ProxyGroup(['foo', 'bar'])
-        >>> group = group.upper()
-        >>> x, y = group  # <- Unpack values.
+        >>> repeating = RepeatingContainer(['foo', 'bar'])
+        >>> repeating = repeating.upper()
+        >>> x, y = repeating  # <- Unpack values.
         >>> x
         'FOO'
         >>> y
         'BAR'
 
-    If the ProxyGroup was created with a dict (or other mapping),
-    then iterating over it will return a sequence of ``(key, value)``
-    tuples. This sequence can be used as-is or used to create another
-    dict::
+    If the RepeatingContainer was created with a dict (or other
+    mapping), then iterating over it will return a sequence of
+    ``(key, value)`` tuples. This sequence can be used as-is or
+    used to create another dict::
 
-        >>> group = ProxyGroup({'a': 'foo', 'b': 'bar'})
-        >>> group = group.upper()
-        >>> list(group)
+        >>> repeating = RepeatingContainer({'a': 'foo', 'b': 'bar'})
+        >>> repeating = repeating.upper()
+        >>> list(repeating)
         [('a', 'FOO'), ('b', 'BAR')]
-        >>> dict(group)
+        >>> dict(repeating)
         {'a': 'FOO', 'b': 'BAR'}
     """
     def __init__(self, iterable):
@@ -195,10 +198,10 @@ class ProxyGroup(ProxyGroupBase):
         return group
 
     def _compatible_group(self, value):
-        """Returns True if *value* is a ProxyGroup with compatible
-        contents.
+        """Returns True if *value* is a RepeatingContainer with
+        compatible contents.
         """
-        if not isinstance(value, ProxyGroup):
+        if not isinstance(value, RepeatingContainer):
             return False
         if len(value._objs) != len(self._objs):
             return False
@@ -208,20 +211,20 @@ class ProxyGroup(ProxyGroupBase):
 
     def _normalize_value(self, value):
         """Return a tuple of objects equal the number of objects
-        contained in the ProxyGroup.
+        contained in the RepeatingContainer.
 
-        If *value* itself is a compatible ProxyGroup, its contents will
-        be returned::
+        If *value* itself is a compatible RepeatingContainer, its
+        contents will be returned::
 
-            >>> group = ProxyGroup([2, 4])
-            >>> group._normalize_value(ProxyGroup([5, 6]))
+            >>> repeating = RepeatingContainer([2, 4])
+            >>> repeating._normalize_value(RepeatingContainer([5, 6]))
             (5, 6)
 
-        If *value* is not a compatible ProxyGroup, the iterable will
-        contain multiple copies of the same *value*::
+        If *value* is not a compatible RepeatingContainer, the iterable
+        will contain multiple copies of the same *value*::
 
-            >>> group = ProxyGroup([2, 4])
-            >>> group._normalize_value(9)
+            >>> repeating = RepeatingContainer([2, 4])
+            >>> repeating._normalize_value(9)
             (9, 9)
         """
         if self._compatible_group(value):
@@ -234,15 +237,15 @@ class ProxyGroup(ProxyGroupBase):
 
     def _expand_args_kwds(self, *args, **kwds):
         """Return an expanded list of *args* and *kwds* to use when
-        calling objects contained in the ProxyGroup.
+        calling objects contained in the RepeatingContainer.
 
-        When a compatible ProxyGroup is passed as an argument, its
-        contents are unwrapped and paired with each record. When a
+        When a compatible RepeatingContainer is passed as an argument,
+        its contents are unwrapped and paired with each record. When a
         non-compatible value is passed as an argument, it is duplicated
         for each record::
 
-            >>> group = ProxyGroup([2, 4])
-            >>> group._expand_args_kwds(ProxyGroup([5, 6]), 9, a=12)
+            >>> repeating = RepeatingContainer([2, 4])
+            >>> repeating._expand_args_kwds(RepeatingContainer([5, 6]), 9, a=12)
             [((5, 9), {'a': 12}),
              ((6, 9), {'a': 12})]
         """
@@ -276,10 +279,10 @@ class ProxyGroup(ProxyGroupBase):
         return group
 
 
-def _setup_ProxyGroup_special_names(proxy_class):
+def _setup_RepeatingContainer_special_names(proxy_class):
     """This function is run when the module is imported--users should
     not call this function directly. It assigns magic methods and
-    special attribute names to the ProxyGroup class.
+    special attribute names to the RepeatingContainer class.
 
     This behavior is wrapped in a function to help keep the
     module-level namespace clean.
@@ -301,10 +304,10 @@ def _setup_ProxyGroup_special_names(proxy_class):
         method = partial(proxy_getattr, name=dunder)
         setattr(proxy_class, dunder, property(method))
 
-    # When a reflected method is called on a ProxyGroup itself, the original
-    # (unreflected) operation is re-applied to the individual objects contained
-    # in the group. If these new calls are also reflected, they will act on the
-    # individual objects--rather than on the group as a whole.
+    # When a reflected method is called on a RepeatingContainer itself, the
+    # original (unreflected) operation is re-applied to the individual objects
+    # contained in the group. If these new calls are also reflected, they will
+    # act on the individual objects--rather than on the group as a whole.
     reflected_special_names = """
         radd rsub rmul rmatmul rtruediv rfloordiv rmod rpow
         rlshift rrshift rand rxor ror rdiv
@@ -322,5 +325,4 @@ def _setup_ProxyGroup_special_names(proxy_class):
         method = partialmethod(proxy_reflected_method, name=name)
         setattr(proxy_class, dunder, method)
 
-_setup_ProxyGroup_special_names(ProxyGroup)
-
+_setup_RepeatingContainer_special_names(RepeatingContainer)
