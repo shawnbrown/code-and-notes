@@ -262,16 +262,38 @@ class Predicate(object):
         False
         >>> pred('C')
         True
+
+    If the *name* argument is given, a ``__name__`` attribute is
+    defined using the given value::
+
+        >>> pred = Predicate({'A', 'B'}, name='a_or_b')
+        >>> pred.__name__
+        'a_or_b'
+
+    If the *name* argument is omitted, the object will not have a
+    ``__name__`` attribute::
+
+        >>> pred = Predicate({'A', 'B'})
+        >>> pred.__name__
+        Traceback (most recent call last):
+          File "<input>", line 1, in <module>
+            pred.__name__
+        AttributeError: 'Predicate' object has no attribute '__name__'
     """
-    def __init__(self, obj):
+    def __init__(self, obj, name=None):
         if isinstance(obj, Predicate):
             self.obj = obj.obj
             self.matcher = obj.matcher
             self._inverted = obj._inverted
+            if hasattr(obj, '__name__'):
+                self.__name__ = obj.__name__
         else:
             self.obj = obj
             self.matcher = get_matcher(obj)
             self._inverted = False
+
+        if name is not None:
+            self.__name__ = name
 
     def __call__(self, other):
         if self._inverted:
@@ -284,9 +306,16 @@ class Predicate(object):
         return new_pred
 
     def __repr__(self):
-        cls_name = self.__class__.__name__
         inverted = '~' if self._inverted else ''
-        return '{0}{1}({2})'.format(inverted, cls_name, repr(self.matcher))
+        class_name = self.__class__.__name__
+        instance_name = getattr(self, '__name__', None)
+        if instance_name is not None:
+            name_arg = ', name={0!r}'.format(instance_name)
+        else:
+            name_arg = ''
+
+        return '{0}{1}({2!r}{3})'.format(
+            inverted, class_name, self.matcher, name_arg)
 
     def __str__(self):
         inverted = 'not ' if self._inverted else ''
