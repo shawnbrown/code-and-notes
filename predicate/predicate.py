@@ -84,16 +84,7 @@ def _check_regex(regex, value):
     try:
         return regex.search(value) is not None
     except TypeError:
-        if value is regex:
-            return True  # <- EXIT!
-
-        value_repr = repr(value)
-        if len(value_repr) > 45:
-            value_repr = value_repr[:42] + '...'
-        msg = 'expected string or bytes-like object, got {0}: {1}'
-        exc = TypeError(msg.format(value.__class__.__name__, value_repr))
-        exc.__cause__ = None
-        raise exc
+        return value is regex
 
 
 def _check_set(set_, value):
