@@ -178,11 +178,11 @@ class Predicate(object):
     | ``re.compile(pattern)`` | value matches the regular         |
     |                         | expression pattern                |
     +-------------------------+-----------------------------------+
-    | ``True``                | ``bool(value)`` returns True      |
-    |                         | (value is truthy)                 |
+    | ``True``                | value is truthy (``bool(value)``  |
+    |                         | returns True)                     |
     +-------------------------+-----------------------------------+
-    | ``False``               | ``bool(value)`` returns False     |
-    |                         | (value is falsy)                  |
+    | ``False``               | value is falsy (``bool(value)``   |
+    |                         | returns False)                    |
     +-------------------------+-----------------------------------+
     | str or non-container    | value is equal to the object      |
     +-------------------------+-----------------------------------+
