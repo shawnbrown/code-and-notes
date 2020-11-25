@@ -57,26 +57,22 @@ def pretty_timedelta_repr(delta, extras='hours,minutes'):
     microseconds = delta.microseconds
 
     if 'weeks' in extras:
-        weeks = days // 7
-        days = days % 7
+        weeks, days = divmod(days, 7)
     else:
         weeks = 0
 
     if 'hours' in extras:
-        hours = seconds // 3600
-        seconds = seconds % 3600
+        hours, seconds = divmod(seconds, 3600)
     else:
         hours = 0
 
     if 'minutes' in extras:
-        minutes = seconds // 60
-        seconds = seconds % 60
+        minutes, seconds = divmod(seconds, 60)
     else:
         minutes = 0
 
     if 'milliseconds' in extras:
-        milliseconds = microseconds // 1000
-        microseconds = microseconds % 1000
+        milliseconds, microseconds = divmod(microseconds, 1000)
     else:
         milliseconds = 0
 
