@@ -12,13 +12,8 @@ License: http://www.apache.org/licenses/LICENSE-2.0
 """
 
 
-def pretty_timedelta_repr(delta, extras='hours,minutes'):
-    """Returns a more human-readable repr for timedelta objects.
-
-    Values are displayed using more intuitive units:
-
-        >>> pretty_timedelta_repr(datetime.timedelta(seconds=29156))
-        'datetime.timedelta(hours=8, minutes=5, seconds=56)'
+def pretty_timedelta_repr(delta, extras=None):
+    """Supports more human-readable reprs for timedelta objects.
 
     Negative values are presented naturally:
 
@@ -30,11 +25,18 @@ def pretty_timedelta_repr(delta, extras='hours,minutes'):
         >>> repr(datetime.timedelta(microseconds=-1))
         'datetime.timedelta(days=-1, seconds=86399, microseconds=999999)'
 
-    The *extras* argument can be a string of comma-separated values
-    or None. If a string is given, it's used to specify optional time
-    units for constructing the repr. Possible values are 'weeks',
-    'hours', 'minutes', and 'milliseconds'. Required units ('days',
-    'seconds', and 'microseconds') will be included as necessary.
+    Using the optional *extras* argument, you can specify a string of
+    comma-separated units to use when constructing the repr. Possible
+    values are 'weeks', 'hours', 'minutes', and 'milliseconds'.
+    Required units ('days', 'seconds', and 'microseconds') will be
+    included as necessary.
+
+    Below, we specify extra units ("hours" and "minutes") to produce
+    a more intuitive repr:
+
+        >>> delta = datetime.timedelta(seconds=29156)
+        >>> pretty_timedelta_repr(delta, extras='hours,minutes')
+        'datetime.timedelta(hours=8, minutes=5, seconds=56)'
     """
     # Note: timedeltas are normalized so that negative values
     # always have a negative 'days' attribute. For example:
@@ -122,22 +124,6 @@ if __name__ == '__main__':
             self.assertEqual(pretty_timedelta_repr(delta), repr(delta))
 
         def test_default_behavior(self):
-            """The *extras* argument defauls to 'hours,minutes'."""
-            delta = timedelta(days=11, seconds=49600)
-
-            actual = pretty_timedelta_repr(delta)
-            expected = 'datetime.timedelta(days=11, hours=13, minutes=46, seconds=40)'
-            self.assertEqual(actual, expected)
-
-        def test_custom_extras(self):
-            """Test breaking out units into 'weeks'."""
-            delta = timedelta(days=11, seconds=49600)
-
-            actual = pretty_timedelta_repr(delta, extras='weeks')
-            expected = 'datetime.timedelta(weeks=1, days=4, seconds=49600)'
-            self.assertEqual(actual, expected)
-
-        def test_no_extras(self):
             """When there are no *extras*, positive deltas should have
             the same repr as timedelta's native repr.
             """
@@ -147,19 +133,42 @@ if __name__ == '__main__':
             expected = 'datetime.timedelta(days=11, seconds=49600)'
             self.assertEqual(actual, expected)
 
+        def test_extras_weeks(self):
+            """Test breaking out units into 'weeks'."""
+            delta = timedelta(days=11, seconds=49600)
+
+            actual = pretty_timedelta_repr(delta, extras='weeks')
+            expected = 'datetime.timedelta(weeks=1, days=4, seconds=49600)'
+            self.assertEqual(actual, expected)
+
+        def test_extras_hours_minutes(self):
+            """The *extras* argument defauls to 'hours,minutes'."""
+            delta = timedelta(days=11, seconds=49600)
+
+            actual = pretty_timedelta_repr(delta, extras='hours,minutes')
+            expected = 'datetime.timedelta(days=11, hours=13, minutes=46, seconds=40)'
+            self.assertEqual(actual, expected)
+
         def test_negative_delta_default_behavior(self):
+            delta = timedelta(days=-9, seconds=-49600)
+
+            actual = pretty_timedelta_repr(delta)
+            expected = 'datetime.timedelta(days=-9, seconds=-49600)'
+            self.assertEqual(actual, expected)
+
+        def test_negative_delta_extras_hours_minutes(self):
             """The builtin repr for timedelta is awful for readability,
             the pretty repr is more natural to read.
             """
             delta = timedelta(microseconds=-1)
 
-            actual = pretty_timedelta_repr(delta)
+            actual = pretty_timedelta_repr(delta, extras='hours,minutes')
             expected = 'datetime.timedelta(microseconds=-1)'
             self.assertEqual(actual, expected)
 
             delta = timedelta(days=-9, seconds=-49600)
 
-            actual = pretty_timedelta_repr(delta)
+            actual = pretty_timedelta_repr(delta, extras='hours,minutes')
             expected = 'datetime.timedelta(days=-9, hours=-13, minutes=-46, seconds=-40)'
             self.assertEqual(actual, expected)
 
@@ -169,13 +178,6 @@ if __name__ == '__main__':
 
             actual = pretty_timedelta_repr(delta, extras='weeks')
             expected = 'datetime.timedelta(weeks=-1, days=-2, seconds=-49600)'
-            self.assertEqual(actual, expected)
-
-        def test_negative_delta_no_extras(self):
-            delta = timedelta(days=-9, seconds=-49600)
-
-            actual = pretty_timedelta_repr(delta, extras=None)
-            expected = 'datetime.timedelta(days=-9, seconds=-49600)'
             self.assertEqual(actual, expected)
 
 
